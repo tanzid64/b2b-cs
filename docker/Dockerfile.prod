@@ -1,0 +1,68 @@
+# Production Dockerfile for BANGLAB2BB2C (support.banglab2bb2c.com)
+#
+# Multi-stage, multi-arch build with the frontend embedded into a single static
+# Go binary. Calling/IVR runtime deps (Piper TTS, ffmpeg, opus-tools) are
+# intentionally NOT installed here — this image is for messaging-only deployments.
+
+# ---------- Frontend ----------
+FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --prefer-offline --no-audit --progress=false
+
+COPY frontend/ .
+RUN npm run build
+
+# ---------- Go build ----------
+FROM --platform=$BUILDPLATFORM golang:1.25.3-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG VERSION=prod
+ARG BUILD_TIME
+
+WORKDIR /app
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+COPY --from=frontend-builder /app/frontend/dist/ ./internal/frontend/dist/
+
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath \
+      -ldflags "-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME}" \
+      -o /out/banglab2bb2c \
+      ./cmd/banglab2bb2c
+
+# ---------- Final runtime ----------
+FROM alpine:3.20
+
+RUN apk add --no-cache ca-certificates tzdata wget \
+    && addgroup -S app -g 10001 \
+    && adduser -S -u 10001 -G app -h /app app \
+    && mkdir -p /app/uploads /app/audio \
+    && chown -R app:app /app
+
+WORKDIR /app
+
+COPY --from=builder --chown=app:app /out/banglab2bb2c /app/banglab2bb2c
+
+# Minimal stub config; runtime values come from BANGLAB2BB2C_* env vars.
+# Mounting a real config.toml at /app/config.toml at runtime overrides this.
+COPY --chown=app:app docker/config.stub.toml /app/config.toml
+
+USER app
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD wget -q --spider http://127.0.0.1:8080/health || exit 1
+
+ENTRYPOINT ["/app/banglab2bb2c"]
+CMD ["server", "-config", "/app/config.toml", "-migrate"]

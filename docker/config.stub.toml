@@ -1,0 +1,13 @@
+# Minimal stub baked into the production image. Real values come from
+# BANGLAB2BB2C_* environment variables (see docs/COOLIFY.md). koanf overlays env
+# on top of this file, so anything missing here is supplied at runtime.
+#
+# Do NOT put secrets in this file — it ships in the image.
+
+[app]
+environment = "production"
+debug = false
+
+[server]
+host = "0.0.0.0"
+port = 8080

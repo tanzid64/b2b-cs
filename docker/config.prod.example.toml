@@ -1,0 +1,87 @@
+# BANGLAB2BB2C — Production configuration template.
+# Copy to docker/config.toml and replace every CHANGE_ME value with a real
+# secret. The container mounts this file read-only at /app/config.toml.
+
+[app]
+name = "BANGLAB2BB2C"
+environment = "production"
+debug = false
+# AES-256 key for encrypting WhatsApp tokens/secrets at rest.
+# Generate with: openssl rand -hex 32
+encryption_key = "CHANGE_ME_openssl_rand_hex_32"
+
+[server]
+host = "0.0.0.0"
+port = 8080
+read_timeout = 30
+write_timeout = 30
+base_path = ""
+# Comma-separated origins allowed by CORS. The browser app is served by the
+# same Go binary on this domain, so only this entry is needed.
+allowed_origins = "https://support.banglab2bb2c.com"
+
+[database]
+# `db` is the docker-compose service name.
+host = "db"
+port = 5432
+user = "banglab2bb2c"
+password = "MUST_MATCH_POSTGRES_PASSWORD_IN_DOT_ENV"
+name = "banglab2bb2c"
+ssl_mode = "disable"
+max_open_conns = 25
+max_idle_conns = 5
+conn_max_lifetime = 300
+
+[redis]
+host = "redis"
+port = 6379
+username = ""
+password = ""
+db = 0
+tls = false
+
+[jwt]
+# Generate with: openssl rand -hex 32
+secret = "CHANGE_ME_openssl_rand_hex_32"
+access_expiry_mins = 15
+refresh_expiry_days = 7
+
+[storage]
+type = "local"
+local_path = "./uploads"
+# To switch to S3, set type = "s3" and fill the four fields below.
+s3_bucket = ""
+s3_region = ""
+s3_key = ""
+s3_secret = ""
+
+[cookie]
+# Empty = current host only. Set to ".banglab2bb2c.com" if you ever serve
+# the app from multiple subdomains and want shared auth.
+domain = ""
+# Auto-forced true when environment = "production"; left explicit here for clarity.
+secure = true
+
+[rate_limit]
+enabled = true
+login_max_attempts = 10
+register_max_attempts = 10
+refresh_max_attempts = 30
+sso_max_attempts = 10
+window_seconds = 60
+# We are behind nginx — trust X-Forwarded-For for real client IP.
+trust_proxy = true
+api_max_requests = 200
+api_window_seconds = 60
+
+# Calling/IVR is intentionally omitted: the production image strips Piper/ffmpeg.
+# If you ever re-enable it, switch to Dockerfile (not Dockerfile.prod) and add
+# the [calling] / [tts] sections back.
+
+# Default admin — only used on first boot when the users table is empty.
+# After first login, CHANGE THIS PASSWORD via the UI and consider removing
+# this section.
+[default_admin]
+email = "admin@banglab2bb2c.com"
+password = "CHANGE_ME_strong_initial_password"
+full_name = "Admin"

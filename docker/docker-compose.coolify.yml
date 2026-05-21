@@ -1,0 +1,95 @@
+# Coolify deployment — single-stack option.
+#
+# Use this when you want app + db + redis as one Coolify "Application" stack.
+# For the recommended split (app here, db/redis as Coolify-managed resources),
+# see docs/COOLIFY.md.
+#
+# Coolify provides its own reverse proxy (Traefik) with auto-TLS. We only
+# `expose` 8080 — Coolify wires the public domain to it via labels it injects.
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    image: banglab2bb2c:prod
+    restart: unless-stopped
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Required — set these in the Coolify UI under "Environment Variables".
+      # Generate secrets with: openssl rand -hex 32
+      BANGLAB2BB2C_APP_ENCRYPTION_KEY: ${BANGLAB2BB2C_APP_ENCRYPTION_KEY}
+      BANGLAB2BB2C_JWT_SECRET:         ${BANGLAB2BB2C_JWT_SECRET}
+
+      # Server
+      BANGLAB2BB2C_SERVER_ALLOWED_ORIGINS: ${BANGLAB2BB2C_SERVER_ALLOWED_ORIGINS:-https://${SERVICE_FQDN_APP}}
+
+      # Database (service hostname inside this compose network)
+      BANGLAB2BB2C_DATABASE_HOST:     db
+      BANGLAB2BB2C_DATABASE_PORT:     "5432"
+      BANGLAB2BB2C_DATABASE_USER:     ${POSTGRES_USER:-banglab2bb2c}
+      BANGLAB2BB2C_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      BANGLAB2BB2C_DATABASE_NAME:     ${POSTGRES_DB:-banglab2bb2c}
+
+      # Redis
+      BANGLAB2BB2C_REDIS_HOST: redis
+      BANGLAB2BB2C_REDIS_PORT: "6379"
+
+      # Cookies — secure flag is auto-on in production, but set domain if
+      # you serve multiple subdomains.
+      BANGLAB2BB2C_COOKIE_SECURE: "true"
+
+      # Rate limit — trust the proxy headers Coolify injects.
+      BANGLAB2BB2C_RATE_LIMIT_ENABLED:     "true"
+      BANGLAB2BB2C_RATE_LIMIT_TRUST_PROXY: "true"
+
+      # Default admin (only used when the users table is empty — change after
+      # first login).
+      BANGLAB2BB2C_DEFAULT_ADMIN_EMAIL:    ${ADMIN_EMAIL:-admin@example.com}
+      BANGLAB2BB2C_DEFAULT_ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    volumes:
+      - app-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-banglab2bb2c}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB:       ${POSTGRES_DB:-banglab2bb2c}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-banglab2bb2c} -d ${POSTGRES_DB:-banglab2bb2c}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  app-uploads:
+  postgres-data:
+  redis-data:
