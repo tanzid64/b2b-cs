@@ -151,10 +151,33 @@ func Load(configPath string) (*Config, error) {
 		}
 	}
 
-	// Load from environment variables (BANGLAB2BB2C_ prefix)
-	// e.g., BANGLAB2BB2C_DATABASE_HOST -> database.host
+	// Load from environment variables (BANGLAB2BB2C_ prefix).
+	//
+	// Mapping rule: BANGLAB2BB2C_<SECTION>_<KEY> -> section.key. Only the
+	// first underscore after the section name becomes a dot — any further
+	// underscores in the key are preserved (because koanf tags like
+	// "allowed_origins" or "encryption_key" contain underscores). Sections
+	// whose own names contain an underscore (default_admin, rate_limit) are
+	// matched explicitly.
+	//
+	// Examples:
+	//   BANGLAB2BB2C_DATABASE_HOST            -> database.host
+	//   BANGLAB2BB2C_SERVER_ALLOWED_ORIGINS   -> server.allowed_origins
+	//   BANGLAB2BB2C_APP_ENCRYPTION_KEY       -> app.encryption_key
+	//   BANGLAB2BB2C_RATE_LIMIT_ENABLED       -> rate_limit.enabled
+	//   BANGLAB2BB2C_DEFAULT_ADMIN_EMAIL      -> default_admin.email
+	multiWordSections := []string{"default_admin", "rate_limit"}
 	if err := k.Load(env.Provider("BANGLAB2BB2C_", ".", func(s string) string {
-		return strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(s, "BANGLAB2BB2C_")), "_", ".")
+		s = strings.ToLower(strings.TrimPrefix(s, "BANGLAB2BB2C_"))
+		for _, section := range multiWordSections {
+			if strings.HasPrefix(s, section+"_") {
+				return section + "." + s[len(section)+1:]
+			}
+		}
+		if i := strings.IndexByte(s, '_'); i >= 0 {
+			return s[:i] + "." + s[i+1:]
+		}
+		return s
 	}), nil); err != nil {
 		return nil, err
 	}
