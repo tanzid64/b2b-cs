@@ -537,6 +537,41 @@ type SubscribeAppResponse struct {
 	Success bool `json:"success"`
 }
 
+// RegisterPhoneRequest is the payload for POST /{phone_id}/register
+type RegisterPhoneRequest struct {
+	MessagingProduct string `json:"messaging_product"`
+	PIN              string `json:"pin"`
+}
+
+// RegisterPhone registers a phone number with the WhatsApp Cloud API using its
+// 6-digit two-step verification PIN. Required once per number before any
+// messaging API calls succeed — without it Meta returns "number is not
+// registered" for sends and many account-test queries.
+//
+// Calls POST /{api_version}/{phone_id}/register
+func (c *Client) RegisterPhone(ctx context.Context, account *Account, pin string) error {
+	url := fmt.Sprintf("%s/%s/%s/register", c.getBaseURL(), account.APIVersion, account.PhoneID)
+
+	respBody, err := c.doRequest(ctx, http.MethodPost, url, RegisterPhoneRequest{
+		MessagingProduct: "whatsapp",
+		PIN:              pin,
+	}, account.AccessToken)
+	if err != nil {
+		return fmt.Errorf("failed to register phone number: %w", err)
+	}
+
+	var resp SubscribeAppResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return fmt.Errorf("failed to parse register response: %w", err)
+	}
+	if !resp.Success {
+		return fmt.Errorf("phone registration was not successful")
+	}
+
+	c.Log.Info("Phone registered with Cloud API", "phone_id", account.PhoneID)
+	return nil
+}
+
 // SubscribeApp subscribes the app to webhooks for the WhatsApp Business Account.
 // This is required after phone number registration to receive incoming messages.
 // Calls POST /{api_version}/{waba_id}/subscribed_apps

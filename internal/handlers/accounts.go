@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/audit"
@@ -498,5 +499,60 @@ func (a *App) SubscribeApp(r *fastglue.Request) error {
 	return r.SendEnvelope(map[string]any{
 		"success": true,
 		"message": "App subscribed to webhooks successfully. You should now receive incoming messages.",
+	})
+}
+
+// registerPhoneRequest is the JSON body for POST /api/accounts/{id}/register
+type registerPhoneRequest struct {
+	PIN string `json:"pin"`
+}
+
+// RegisterPhone registers the phone number with the WhatsApp Cloud API.
+// Required once per number before Meta will accept message sends — caller
+// supplies the 6-digit two-step verification PIN configured in WhatsApp
+// Manager.
+func (a *App) RegisterPhone(r *fastglue.Request) error {
+	orgID, err := a.getOrgID(r)
+	if err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
+	}
+
+	id, err := parsePathUUID(r, "id", "account")
+	if err != nil {
+		return nil
+	}
+
+	var req registerPhoneRequest
+	if err := json.Unmarshal(r.RequestCtx.PostBody(), &req); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid request body", nil, "")
+	}
+	pin := strings.TrimSpace(req.PIN)
+	if len(pin) != 6 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "PIN must be 6 digits", nil, "")
+	}
+	for _, c := range pin {
+		if c < '0' || c > '9' {
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "PIN must be 6 digits", nil, "")
+		}
+	}
+
+	account, err := a.resolveWhatsAppAccountByID(r, id, orgID)
+	if err != nil {
+		return nil
+	}
+
+	ctx := context.Background()
+	if err := a.WhatsApp.RegisterPhone(ctx, a.toWhatsAppAccount(account), pin); err != nil {
+		a.Log.Error("Failed to register phone with Cloud API", "error", err, "account", account.Name)
+		return r.SendEnvelope(map[string]any{
+			"success": false,
+			"error":   fmt.Sprintf("Failed to register phone: %s", err.Error()),
+		})
+	}
+
+	a.Log.Info("Phone registered with Cloud API", "account", account.Name, "phone_id", account.PhoneID)
+	return r.SendEnvelope(map[string]any{
+		"success": true,
+		"message": "Phone registered with WhatsApp Cloud API. You can now send and receive messages.",
 	})
 }

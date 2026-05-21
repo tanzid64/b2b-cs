@@ -31,6 +31,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Phone,
   Save,
   Trash2,
@@ -44,6 +52,7 @@ import {
   TestTube2,
   Check,
   X,
+  KeyRound,
 } from 'lucide-vue-next'
 
 interface WhatsAppAccount {
@@ -100,6 +109,9 @@ const testResult = ref<TestResult | null>(null)
 const testingConnection = ref(false)
 const subscribing = ref(false)
 const isProfileDialogOpen = ref(false)
+const isRegisterDialogOpen = ref(false)
+const registering = ref(false)
+const registerPin = ref('')
 
 const { showLeaveDialog, confirmLeave, cancelLeave } = useUnsavedChangesGuard(hasChanges)
 
@@ -250,6 +262,34 @@ async function subscribeApp() {
   }
 }
 
+function openRegisterDialog() {
+  registerPin.value = ''
+  isRegisterDialogOpen.value = true
+}
+
+async function registerPhone() {
+  if (!account.value) return
+  const pin = registerPin.value.trim()
+  if (!/^\d{6}$/.test(pin)) {
+    toast.error(t('accounts.registerPinInvalid', 'PIN must be exactly 6 digits'))
+    return
+  }
+  registering.value = true
+  try {
+    const response = await api.post(`/accounts/${account.value.id}/register`, { pin })
+    if (response.data.data?.success) {
+      toast.success(t('accounts.registerSuccess', 'Phone registered with Cloud API'))
+      isRegisterDialogOpen.value = false
+    } else {
+      toast.error(response.data.data?.error || t('accounts.registerFailed', 'Registration failed'))
+    }
+  } catch (e) {
+    toast.error(getErrorMessage(e, t('accounts.registerError', 'Registration error')))
+  } finally {
+    registering.value = false
+  }
+}
+
 async function copyToClipboard(text: string) {
   try {
     await navigator.clipboard.writeText(text)
@@ -291,6 +331,10 @@ onMounted(async () => {
           <Loader2 v-if="subscribing" class="h-4 w-4 animate-spin mr-1" />
           <Bell v-else class="h-4 w-4 mr-1" />
           {{ $t('accounts.subscribe', 'Subscribe') }}
+        </Button>
+        <Button v-if="!isNew && account" variant="outline" size="sm" @click="openRegisterDialog">
+          <KeyRound class="h-4 w-4 mr-1" />
+          {{ $t('accounts.register', 'Register') }}
         </Button>
         <Button v-if="!isNew && account" variant="outline" size="sm" @click="isProfileDialogOpen = true">
           <Store class="h-4 w-4 mr-1" />
@@ -502,6 +546,44 @@ onMounted(async () => {
     :account-id="account.id"
     :account-name="account.name"
   />
+
+  <!-- Cloud API Registration -->
+  <Dialog v-model:open="isRegisterDialogOpen">
+    <DialogContent class="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>{{ $t('accounts.registerTitle', 'Register with WhatsApp Cloud API') }}</DialogTitle>
+        <DialogDescription>
+          {{ $t('accounts.registerDescription', 'Enter the 6-digit two-step verification PIN you set for this number in WhatsApp Manager. This is a one-time step — once registered, the number is ready to send and receive messages.') }}
+        </DialogDescription>
+      </DialogHeader>
+      <div class="space-y-2 py-2">
+        <Label for="register-pin">{{ $t('accounts.registerPinLabel', '6-digit PIN') }}</Label>
+        <Input
+          id="register-pin"
+          v-model="registerPin"
+          inputmode="numeric"
+          maxlength="6"
+          autocomplete="one-time-code"
+          placeholder="123456"
+          :disabled="registering"
+          @keydown.enter="registerPhone"
+        />
+        <p class="text-xs text-muted-foreground">
+          {{ $t('accounts.registerPinHint', 'Set this in WhatsApp Manager → Phone Numbers → ⚙️ Two-step verification.') }}
+        </p>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" :disabled="registering" @click="isRegisterDialogOpen = false">
+          {{ $t('common.cancel', 'Cancel') }}
+        </Button>
+        <Button :disabled="registering" @click="registerPhone">
+          <Loader2 v-if="registering" class="h-4 w-4 animate-spin mr-1" />
+          <KeyRound v-else class="h-4 w-4 mr-1" />
+          {{ $t('accounts.register', 'Register') }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 
   <UnsavedChangesDialog :open="showLeaveDialog" @stay="cancelLeave" @leave="confirmLeave" />
   </div>
