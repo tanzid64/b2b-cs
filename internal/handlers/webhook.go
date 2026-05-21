@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/websocket"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/websocket"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

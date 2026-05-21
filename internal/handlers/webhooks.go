@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/audit"
-	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/audit"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -357,7 +357,7 @@ func (a *App) TestWebhook(r *fastglue.Request) error {
 	// Send a test event synchronously
 	testData := map[string]any{
 		"test":      true,
-		"message":   "This is a test webhook from Whatomate",
+		"message":   "This is a test webhook from BANGLAB2BB2C",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
 

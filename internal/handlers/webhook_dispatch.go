@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
 )
 
 // OutboundWebhookPayload represents the structure sent to external webhook endpoints
@@ -183,7 +183,7 @@ func (a *App) sendWebhookRequest(ctx context.Context, webhook models.Webhook, js
 
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Whatomate-Webhook/1.0")
+	req.Header.Set("User-Agent", "BANGLAB2BB2C-Webhook/1.0")
 
 	// Add custom headers from webhook config
 	if webhook.Headers != nil {

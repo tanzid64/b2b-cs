@@ -11,7 +11,7 @@ import (
 
 	"github.com/expr-lang/expr"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
 )
 
 // maxChatGraphIterations bounds non-blocking node chains within a single

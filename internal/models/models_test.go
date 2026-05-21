@@ -3,7 +3,7 @@ package models_test
 import (
 	"testing"
 
-	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

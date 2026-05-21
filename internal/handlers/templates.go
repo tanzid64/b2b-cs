@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/audit"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/templateutil"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/audit"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/templateutil"
+	"github.com/banglab2bb2c/banglab2bb2c/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

@@ -14,7 +14,6 @@ import {
 } from 'lucide-vue-next'
 import { wsService } from '@/services/websocket'
 import { authService } from '@/services/api'
-import OrganizationSwitcher from './OrganizationSwitcher.vue'
 import UserMenu from './UserMenu.vue'
 import ActiveCallPanel from '@/components/calling/ActiveCallPanel.vue'
 import { ScrollToTop } from '@/components/shared'
@@ -113,7 +112,7 @@ const handleLogout = async () => {
         <div class="h-7 w-7 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
           <MessageSquare class="h-4 w-4 text-white" />
         </div>
-        <span class="font-semibold text-sm text-white light:text-gray-900">Whatomate</span>
+        <span class="font-semibold text-sm text-white light:text-gray-900">BANGLAB2BB2C</span>
       </RouterLink>
       <Button
         variant="ghost"
@@ -157,7 +156,7 @@ const handleLogout = async () => {
             v-if="!isCollapsed"
             class="font-semibold text-sm text-white light:text-gray-900"
           >
-            Whatomate
+            BANGLAB2BB2C
           </span>
         </RouterLink>
         <Button
@@ -174,9 +173,6 @@ const handleLogout = async () => {
       </div>
       <!-- Mobile logo spacer -->
       <div class="h-12 md:hidden" />
-
-      <!-- Organization Switcher (Super Admin only) -->
-      <OrganizationSwitcher :collapsed="isCollapsed" />
 
       <!-- Navigation -->
       <ScrollArea class="flex-1 py-2">

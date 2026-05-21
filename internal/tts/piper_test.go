@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/shridarpatil/whatomate/internal/tts"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/tts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

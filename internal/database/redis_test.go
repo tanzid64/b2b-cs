@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/database"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

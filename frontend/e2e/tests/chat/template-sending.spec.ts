@@ -6,7 +6,7 @@ import { createTestScope } from '../../framework'
 
 const scope = createTestScope('template-sending')
 
-const DB_URL = process.env.TEST_DATABASE_URL || 'postgres://whatomate:whatomate@127.0.0.1:5432/whatomate'
+const DB_URL = process.env.TEST_DATABASE_URL || 'postgres://banglab2bb2c:banglab2bb2c@127.0.0.1:5432/banglab2bb2c'
 
 /**
  * Run a SQL statement against the test database using node-postgres.

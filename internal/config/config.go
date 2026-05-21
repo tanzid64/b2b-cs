@@ -65,7 +65,7 @@ type ServerConfig struct {
 	Port           int    `koanf:"port"`
 	ReadTimeout    int    `koanf:"read_timeout"`
 	WriteTimeout   int    `koanf:"write_timeout"`
-	BasePath       string `koanf:"base_path"`       // Base path for frontend (e.g., "/whatomate" for proxy pass)
+	BasePath       string `koanf:"base_path"`       // Base path for frontend (e.g., "/banglab2bb2c" for proxy pass)
 	AllowedOrigins string `koanf:"allowed_origins"` // Comma-separated list of allowed CORS origins
 }
 
@@ -151,10 +151,10 @@ func Load(configPath string) (*Config, error) {
 		}
 	}
 
-	// Load from environment variables (WHATOMATE_ prefix)
-	// e.g., WHATOMATE_DATABASE_HOST -> database.host
-	if err := k.Load(env.Provider("WHATOMATE_", ".", func(s string) string {
-		return strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(s, "WHATOMATE_")), "_", ".")
+	// Load from environment variables (BANGLAB2BB2C_ prefix)
+	// e.g., BANGLAB2BB2C_DATABASE_HOST -> database.host
+	if err := k.Load(env.Provider("BANGLAB2BB2C_", ".", func(s string) string {
+		return strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(s, "BANGLAB2BB2C_")), "_", ".")
 	}), nil); err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func Load(configPath string) (*Config, error) {
 
 func setDefaults(cfg *Config) {
 	if cfg.App.Name == "" {
-		cfg.App.Name = "Whatomate"
+		cfg.App.Name = "BANGLAB2BB2C"
 	}
 	if cfg.App.Environment == "" {
 		cfg.App.Environment = "development"

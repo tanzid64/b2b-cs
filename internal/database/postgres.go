@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -308,17 +308,17 @@ func CreateDefaultAdmin(db *gorm.DB, cfg *config.DefaultAdminConfig) error {
 		return nil
 	}
 
-	// Find any existing organization, or create "Default Organization" if none exist
+	// Find the single org, or create BANGLAB2BB2C if it doesn't exist.
+	// This is a single-tenant build: there is exactly one organization.
 	var org models.Organization
 	if err := db.First(&org).Error; err != nil {
-		// No organizations exist, create default one
 		org = models.Organization{
 			BaseModel: models.BaseModel{ID: uuid.New()},
-			Name:      "Default Organization",
+			Name:      "BANGLAB2BB2C",
 			Settings:  models.JSONB{},
 		}
 		if err := db.Create(&org).Error; err != nil {
-			return fmt.Errorf("failed to create default organization: %w", err)
+			return fmt.Errorf("failed to create BANGLAB2BB2C organization: %w", err)
 		}
 	}
 

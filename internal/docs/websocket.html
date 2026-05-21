@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BANGLAB2BB2C WebSocket Protocol</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1f2328;
+      --muted: #57606a;
+      --border: #d0d7de;
+      --code-bg: #f6f8fa;
+      --link: #0969da;
+      --hl: #fff8c5;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117; --fg: #c9d1d9; --muted: #8b949e;
+        --border: #30363d; --code-bg: #161b22; --link: #58a6ff; --hl: #1f2a44;
+      }
+    }
+    body {
+      max-width: 880px; margin: 0 auto; padding: 32px 20px;
+      font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      color: var(--fg); background: var(--bg);
+    }
+    h1, h2, h3 { line-height: 1.25; }
+    h1 { font-size: 28px; margin-bottom: 4px; }
+    h2 { margin-top: 40px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    h3 { margin-top: 28px; font-size: 17px; }
+    h3 code { font-size: 16px; }
+    .lead { color: var(--muted); margin-top: 0; }
+    a { color: var(--link); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    code { background: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+    pre {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 14px; overflow: auto; font-size: 13px;
+    }
+    pre code { background: transparent; padding: 0; }
+    table { border-collapse: collapse; margin: 16px 0; width: 100%; }
+    th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+    th { background: var(--code-bg); font-weight: 600; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .tag-out { background: #d1f4d1; color: #1a661a; }
+    .tag-in  { background: #ffd9b3; color: #804000; }
+    .tag-both { background: #d6e7ff; color: #003580; }
+    @media (prefers-color-scheme: dark) {
+      .tag-out { background: #1a3d1a; color: #7ee787; }
+      .tag-in  { background: #4a2d00; color: #ffa657; }
+      .tag-both { background: #0d2d5e; color: #79c0ff; }
+    }
+    .toc { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 18px; }
+    .toc ul { margin: 6px 0; padding-left: 22px; }
+    .back { display: inline-block; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<a class="back" href="/docs">&larr; Back to REST API</a>
+
+<h1>WebSocket Protocol</h1>
+<p class="lead">Realtime event stream for the BANGLAB2BB2C mobile app. Companion to the <a href="/docs">REST API</a>.</p>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ul>
+    <li><a href="#connect">1. Connecting</a></li>
+    <li><a href="#envelope">2. Message envelope</a></li>
+    <li><a href="#client">3. Client → server events</a></li>
+    <li><a href="#server">4. Server → client events</a></li>
+    <li><a href="#heartbeat">5. Heartbeat &amp; reconnection</a></li>
+    <li><a href="#filtering">6. Filtering &amp; scoping</a></li>
+  </ul>
+</div>
+
+<h2 id="connect">1. Connecting</h2>
+<p>
+  WebSocket handshakes from mobile clients cannot send the HTTP-only auth cookies.
+  Use a two-step mint:
+</p>
+<ol>
+  <li>While authenticated, <code>GET /api/auth/ws-token</code> →
+      returns <code>{ "token": "&lt;jwt&gt;" }</code> (~30s TTL).</li>
+  <li>Open a WebSocket to <code>wss://&lt;host&gt;/ws</code> (or <code>ws://</code> locally).</li>
+  <li>
+    Send <strong>this as the very first message</strong>:
+    <pre><code>{ "type": "auth", "payload": { "token": "&lt;the-jwt&gt;" } }</code></pre>
+    If the token is invalid or you send anything else first, the server closes
+    the connection with a <code>1008 / policy violation</code> close code.
+  </li>
+  <li>From that point on, you receive event messages and may send <code>set_contact</code> / <code>ping</code>.</li>
+</ol>
+
+<h2 id="envelope">2. Message envelope</h2>
+<p>Every frame (both directions) is a JSON object with two fields:</p>
+<pre><code>{ "type": "&lt;event-name&gt;", "payload": &lt;object|null&gt; }</code></pre>
+<p>
+  <code>type</code> is a stable lowercase string (snake_case). <code>payload</code>
+  varies per event and is documented below.
+</p>
+
+<h2 id="client">3. Client → server events</h2>
+<table>
+  <thead>
+    <tr><th>Type</th><th>Payload</th><th>When to send</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>auth</code></td>
+      <td><code>{ "token": "&lt;jwt-from-/api/auth/ws-token&gt;" }</code></td>
+      <td>First frame after the WebSocket opens. Mandatory.</td>
+    </tr>
+    <tr>
+      <td><code>set_contact</code></td>
+      <td><code>{ "contact_id": "&lt;uuid&gt;" }</code></td>
+      <td>
+        When the agent opens or switches a conversation. The server uses this
+        to scope <code>new_message</code> / <code>status_update</code> events to
+        what the agent is actually viewing, so you don't get spammed with events
+        for all conversations at once. Send <code>{ "contact_id": "" }</code> when
+        leaving a conversation view.
+      </td>
+    </tr>
+    <tr>
+      <td><code>ping</code></td>
+      <td>none (omit or use <code>null</code>)</td>
+      <td>
+        Application-level heartbeat. The server replies with <code>pong</code>.
+        See <a href="#heartbeat">heartbeat</a>.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="server">4. Server → client events</h2>
+<p>
+  Every payload below appears as the <code>payload</code> field of the envelope.
+  Where the payload is a domain object (Contact, Message, etc.) the shape
+  matches the corresponding REST schema — see <a href="/docs">the REST API doc</a>
+  for full definitions.
+</p>
+
+<h3><span class="tag tag-in">in</span> <code>pong</code></h3>
+<p>Reply to your <code>ping</code>. Payload: none.</p>
+
+<h3><span class="tag tag-in">in</span> <code>new_message</code></h3>
+<p>A new chat message arrived (inbound from a customer, or outbound sent by
+another agent in your org). Payload is a full <code>Message</code> object
+(see <a href="/docs#/Messages">Messages schema</a>).</p>
+<pre><code>{
+  "type": "new_message",
+  "payload": {
+    "id": "…",
+    "contact_id": "…",
+    "direction": "incoming",
+    "message_type": "text",
+    "content": { "body": "Hello" },
+    "status": "delivered",
+    "created_at": "2026-05-21T07:00:00Z",
+    …
+  }
+}</code></pre>
+<p><strong>Scoping:</strong> sent to every connected agent in the org. Use the
+<code>contact_id</code> field to decide whether to update the open conversation
+view or just bump the contact list's unread counter.</p>
+
+<h3><span class="tag tag-in">in</span> <code>status_update</code></h3>
+<p>An outbound message changed delivery state (<code>sent → delivered → read</code>,
+or <code>failed</code>).</p>
+<pre><code>{ "type": "status_update", "payload": { "message_id": "&lt;uuid&gt;", "status": "delivered" } }</code></pre>
+<p><strong>Scoping:</strong> only delivered to clients currently viewing the
+contact (via <code>set_contact</code>) — keeps the wire quiet when the agent
+isn't looking.</p>
+
+<h3><span class="tag tag-in">in</span> <code>contact_update</code></h3>
+<p>A contact's metadata changed — typically <code>unread_count</code>, last
+message preview, assignment, tags, or marketing opt-out. Payload is a full
+<code>Contact</code> object.</p>
+
+<h3><span class="tag tag-in">in</span> <code>agent_transfer</code></h3>
+<p>A new transfer is waiting in the queue (the chatbot or another agent handed
+off a conversation). Payload is an <code>AgentTransfer</code>.</p>
+<p>Use this to refresh the agent's queue badge / pick-from-queue list.</p>
+
+<h3><span class="tag tag-in">in</span> <code>agent_transfer_assign</code></h3>
+<p>A transfer was assigned (to you, or to someone else). The payload's
+<code>assigned_agent_id</code> tells you which. Use this to remove the
+transfer from the pickable queue.</p>
+
+<h3><span class="tag tag-in">in</span> <code>agent_transfer_resume</code></h3>
+<p>A transfer was resumed (the agent handed the chat back to the bot). Use this
+to remove the transfer from any "my open transfers" view.</p>
+
+<h3><span class="tag tag-in">in</span> <code>transfer_escalation</code> / <code>transfer_expired</code> / <code>transfer_escalated</code></h3>
+<p>SLA processor events. Fired when a waiting transfer breaches its SLA window
+and either escalates to a leader or expires entirely. Payload is the affected
+<code>AgentTransfer</code>.</p>
+
+<h3><span class="tag tag-in">in</span> <code>permissions_updated</code></h3>
+<p>The agent's role or permissions changed. Payload is opaque — on receipt,
+re-fetch <code>GET /api/me</code> and rebuild any permission-gated UI.</p>
+
+<h3><span class="tag tag-in">in</span> <code>conversation_note_created</code> / <code>_updated</code> / <code>_deleted</code></h3>
+<p>Internal note on a conversation was added, edited, or removed. Payload is
+the note object (id, contact_id, body, author, timestamps). Scoped to clients
+viewing the same contact.</p>
+
+<h3><span class="tag tag-in">in</span> <code>call_*</code> events</h3>
+<p>
+  WhatsApp Cloud API calling events. Mostly relevant if your mobile app
+  surfaces voice features. Types:
+  <code>call_incoming</code>, <code>call_answered</code>, <code>call_ended</code>,
+  <code>call_hold</code>, <code>call_resumed</code>,
+  <code>call_transfer_waiting</code>, <code>call_transfer_connected</code>,
+  <code>call_transfer_completed</code>, <code>call_transfer_abandoned</code>,
+  <code>call_transfer_no_answer</code>, <code>call_transfer_reassigned</code>,
+  <code>outgoing_call_initiated</code>, <code>outgoing_call_ringing</code>,
+  <code>outgoing_call_answered</code>, <code>outgoing_call_rejected</code>,
+  <code>outgoing_call_ended</code>, <code>call_permission_update</code>.
+</p>
+<p>Calling is not enabled on test phone numbers — if your business number
+doesn't have Cloud API Calling enabled with Meta, you'll never see these.</p>
+
+<h2 id="heartbeat">5. Heartbeat &amp; reconnection</h2>
+<ul>
+  <li>The server enforces a read deadline (~60s). Without traffic it closes the connection.</li>
+  <li>Send <code>{"type":"ping"}</code> every 25–30 seconds to keep it alive.</li>
+  <li>The server replies <code>{"type":"pong"}</code>; treat its absence after ~10s as a dead socket.</li>
+  <li>
+    On any close, mint a fresh token (<code>/api/auth/ws-token</code>) and reconnect with
+    exponential backoff (start at 1s, cap at ~30s). The token TTL is short, so always
+    fetch a new one before each connect attempt — don't cache it.
+  </li>
+  <li>
+    On reconnect, re-send <code>set_contact</code> for the conversation the agent
+    is viewing — the server has no memory of your previous focus.
+  </li>
+</ul>
+
+<h2 id="filtering">6. Filtering &amp; scoping</h2>
+<p>
+  The server fans events out based on three keys: <strong>org</strong>,
+  <strong>user</strong>, and <strong>contact</strong>. A given message can target:
+</p>
+<ul>
+  <li><strong>Whole org</strong> — most <code>agent_transfer*</code> events.</li>
+  <li><strong>Single user</strong> — <code>permissions_updated</code>, some assignment events.</li>
+  <li>
+    <strong>Anyone viewing a contact</strong> — <code>new_message</code>,
+    <code>status_update</code>, <code>contact_update</code>, conversation notes,
+    call events. "Viewing" means the client called
+    <code>set_contact</code> for that contact.
+  </li>
+</ul>
+<p>
+  Don't assume a single client receives every event for every conversation —
+  the contact filter actively suppresses chatter for things the agent isn't
+  looking at. Drive your contact-list unread badge off <code>contact_update</code>
+  (which the server always sends, regardless of focus), and drive the
+  open-conversation view off <code>new_message</code> / <code>status_update</code>
+  (which only arrive when focused).
+</p>
+
+</body>
+</html>

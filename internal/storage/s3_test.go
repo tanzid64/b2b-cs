@@ -3,8 +3,8 @@ package storage_test
 import (
 	"testing"
 
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/storage"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

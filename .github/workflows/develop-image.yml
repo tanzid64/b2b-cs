@@ -42,7 +42,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            shridh0r/whatomate:develop
-            ghcr.io/${{ github.repository_owner }}/whatomate:develop
+            ghcr.io/${{ github.repository_owner }}/banglab2bb2c:develop
           cache-from: type=gha
           cache-to: type=gha,mode=max

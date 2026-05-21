@@ -18,7 +18,7 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_DB: whatomate_test
+          POSTGRES_DB: banglab2bb2c_test
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
         ports:
@@ -59,7 +59,7 @@ jobs:
         run: |
           cat > config.toml << 'EOF'
           [app]
-          name = "Whatomate"
+          name = "BANGLAB2BB2C"
           environment = "test"
           debug = true
 
@@ -75,7 +75,7 @@ jobs:
           port = 5432
           user = "test"
           password = "test"
-          name = "whatomate_test"
+          name = "banglab2bb2c_test"
           ssl_mode = "disable"
           max_open_conns = 25
           max_idle_conns = 5
@@ -112,16 +112,16 @@ jobs:
           cp -r frontend/dist/* internal/frontend/dist/
 
       - name: Build backend
-        run: go build -o whatomate ./cmd/whatomate
+        run: go build -o banglab2bb2c ./cmd/banglab2bb2c
 
       - name: Start backend with migrations
         run: |
-          ./whatomate server -migrate &
+          ./banglab2bb2c server -migrate &
           sleep 10
           # Verify server is running
           curl -f http://localhost:8080/health || exit 1
         env:
-          WHATOMATE_CONFIG: config.toml
+          BANGLAB2BB2C_CONFIG: config.toml
 
       - name: Install Playwright browsers
         run: cd frontend && npx playwright install chromium --with-deps
@@ -130,7 +130,7 @@ jobs:
         run: cd frontend && npm run test:e2e
         env:
           BASE_URL: http://localhost:8080
-          TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/whatomate_test
+          TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/banglab2bb2c_test
           CI: true
 
       - name: Upload Playwright report

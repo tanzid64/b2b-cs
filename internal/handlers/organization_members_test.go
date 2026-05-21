@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/handlers"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -15,7 +15,9 @@ import (
 
 // --- CreateOrganization Tests ---
 
-func TestApp_CreateOrganization_Success(t *testing.T) {
+// Single-tenant deployments reject every CreateOrganization call regardless
+// of auth state — there is exactly one seeded org (BANGLAB2BB2C).
+func TestApp_CreateOrganization_DisabledForSingleTenant(t *testing.T) {
 	t.Parallel()
 
 	app := newTestApp(t)
@@ -25,57 +27,13 @@ func TestApp_CreateOrganization_Success(t *testing.T) {
 	user := testutil.CreateTestUser(t, app.DB, org.ID, testutil.WithEmail(testutil.UniqueEmail("create-org")), testutil.WithRoleID(&role.ID))
 
 	req := testutil.NewJSONRequest(t, map[string]string{
-		"name": "New Test Organization",
+		"name": "Another Org",
 	})
 	testutil.SetAuthContext(req, org.ID, user.ID)
 
 	err := app.CreateOrganization(req)
 	require.NoError(t, err)
-	assert.Equal(t, fasthttp.StatusOK, testutil.GetResponseStatusCode(req))
-
-	var resp struct {
-		Data handlers.OrganizationResponse `json:"data"`
-	}
-	err = json.Unmarshal(testutil.GetResponseBody(req), &resp)
-	require.NoError(t, err)
-
-	assert.Equal(t, "New Test Organization", resp.Data.Name)
-	assert.NotEmpty(t, resp.Data.Slug)
-	assert.NotEqual(t, uuid.Nil, resp.Data.ID)
-	assert.NotEmpty(t, resp.Data.CreatedAt)
-}
-
-func TestApp_CreateOrganization_EmptyName(t *testing.T) {
-	t.Parallel()
-
-	app := newTestApp(t)
-	org := testutil.CreateTestOrganization(t, app.DB)
-	allPerms := testutil.GetOrCreateTestPermissions(t, app.DB)
-	role := testutil.CreateTestRole(t, app.DB, org.ID, "admin", allPerms)
-	user := testutil.CreateTestUser(t, app.DB, org.ID, testutil.WithEmail(testutil.UniqueEmail("create-org-empty")), testutil.WithRoleID(&role.ID))
-
-	req := testutil.NewJSONRequest(t, map[string]string{
-		"name": "",
-	})
-	testutil.SetAuthContext(req, org.ID, user.ID)
-
-	err := app.CreateOrganization(req)
-	require.NoError(t, err)
-	assert.Equal(t, fasthttp.StatusBadRequest, testutil.GetResponseStatusCode(req))
-}
-
-func TestApp_CreateOrganization_Unauthorized(t *testing.T) {
-	t.Parallel()
-
-	app := newTestApp(t)
-
-	req := testutil.NewJSONRequest(t, map[string]string{
-		"name": "Unauthorized Org",
-	})
-
-	err := app.CreateOrganization(req)
-	require.NoError(t, err)
-	assert.Equal(t, fasthttp.StatusUnauthorized, testutil.GetResponseStatusCode(req))
+	assert.Equal(t, fasthttp.StatusForbidden, testutil.GetResponseStatusCode(req))
 }
 
 // --- ListOrganizationMembers Tests ---

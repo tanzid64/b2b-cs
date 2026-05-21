@@ -6,13 +6,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
 	"github.com/zerodha/logf"
 )
 
 const (
 	// CampaignStatsChannel is the Redis pub/sub channel for campaign stats updates
-	CampaignStatsChannel = "whatomate:campaign_stats"
+	CampaignStatsChannel = "banglab2bb2c:campaign_stats"
 )
 
 // CampaignStatsUpdate represents a campaign stats update message

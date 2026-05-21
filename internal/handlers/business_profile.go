@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
+	"github.com/banglab2bb2c/banglab2bb2c/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

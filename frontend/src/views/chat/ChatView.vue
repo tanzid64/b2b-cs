@@ -93,6 +93,7 @@ import { getInitials, getAvatarGradient } from '@/lib/utils'
 import { useColorMode } from '@/composables/useColorMode'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import CannedResponsePicker from '@/components/chat/CannedResponsePicker.vue'
+import VoiceRecorder from '@/components/chat/VoiceRecorder.vue'
 import PreviewButtonGroup from '@/components/chatbot/flow-preview/PreviewButtonGroup.vue'
 import TemplatePicker from '@/components/chat/TemplatePicker.vue'
 import ContactInfoPanel from '@/components/chat/ContactInfoPanel.vue'
@@ -1543,51 +1544,70 @@ function getMediaType(mimeType: string): string {
   return 'document'
 }
 
-async function sendMediaMessage() {
-  if (!selectedFile.value || !contactsStore.currentContact) return
+// Shared upload path for any media File — used by the attachment dialog and
+// the voice recorder. Throws on failure so callers control toasts/state.
+async function uploadAndSendFile(file: File, caption?: string): Promise<void> {
+  if (!contactsStore.currentContact) throw new Error('No contact selected')
 
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('contact_id', contactsStore.currentContact.id)
+  formData.append('type', getMediaType(file.type))
+  if (caption && caption.trim()) {
+    formData.append('caption', caption.trim())
+  }
+  if (selectedAccount.value) {
+    formData.append('whatsapp_account', selectedAccount.value)
+  }
+
+  const basePath = ((window as any).__BASE_PATH__ ?? '').replace(/\/$/, '')
+  const response = await fetch(`${basePath}/api/messages/media`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: getRequestHeaders({ csrf: true }),
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Failed to send media')
+  }
+
+  const result = await response.json()
+  if (result.data) {
+    contactsStore.addMessage(result.data)
+    scrollToBottom()
+  }
+}
+
+async function sendMediaMessage() {
+  if (!selectedFile.value) return
   isUploadingMedia.value = true
   try {
-    const formData = new FormData()
-    formData.append('file', selectedFile.value)
-    formData.append('contact_id', contactsStore.currentContact.id)
-    formData.append('type', getMediaType(selectedFile.value.type))
-    if (mediaCaption.value.trim()) {
-      formData.append('caption', mediaCaption.value.trim())
-    }
-    if (selectedAccount.value) {
-      formData.append('whatsapp_account', selectedAccount.value)
-    }
-
-    const basePath = ((window as any).__BASE_PATH__ ?? '').replace(/\/$/, '')
-    const response = await fetch(`${basePath}/api/messages/media`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: getRequestHeaders({ csrf: true }),
-      body: formData
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Failed to send media')
-    }
-
-    const result = await response.json()
-
-    // Add the message to the store (addMessage has duplicate checking for WebSocket)
-    if (result.data) {
-      contactsStore.addMessage(result.data)
-      scrollToBottom()
-    }
-
+    await uploadAndSendFile(selectedFile.value, mediaCaption.value)
     toast.success(t('chat.mediaSent'))
     closeMediaDialog()
   } catch (error: any) {
     toast.error(t('chat.mediaFailed'), {
-      description: error.message || t('chat.mediaFailedDesc')
+      description: error.message || t('chat.mediaFailedDesc'),
     })
   } finally {
     isUploadingMedia.value = false
+  }
+}
+
+const voiceRecorderRef = ref<InstanceType<typeof VoiceRecorder> | null>(null)
+async function handleVoiceNote(file: File) {
+  // Skip the caption dialog — voice notes never have one.
+  try {
+    await uploadAndSendFile(file)
+    toast.success(t('chat.mediaSent'))
+  } catch (error: any) {
+    toast.error(t('chat.mediaFailed'), {
+      description: error.message || t('chat.mediaFailedDesc'),
+    })
+  } finally {
+    voiceRecorderRef.value?.reset()
   }
 }
 </script>
@@ -2401,6 +2421,7 @@ async function sendMediaMessage() {
               class="hidden"
               @change="handleFileSelect"
             />
+            <VoiceRecorder ref="voiceRecorderRef" @send="handleVoiceNote" />
             <textarea
               ref="messageInputRef"
               v-model="messageInput"

@@ -13,7 +13,7 @@ import (
 
 const (
 	// StreamName is the Redis stream for campaign jobs
-	StreamName = "whatomate:campaigns"
+	StreamName = "banglab2bb2c:campaigns"
 
 	// ConsumerGroup is the consumer group name for workers
 	ConsumerGroup = "campaign-workers"

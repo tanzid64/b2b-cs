@@ -8,9 +8,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/test/testutil"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/middleware"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -29,7 +29,7 @@ func generateRefreshTokenWithJTI(t *testing.T, secret string, user *models.User,
 			ID:        jti,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "whatomate",
+			Issuer:    "banglab2bb2c",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/shridarpatil/whatomate/internal/config"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +22,7 @@ func TestLoad_AppliesDefaultsForMissingFields(t *testing.T) {
 	cfg, err := config.Load(writeConfig(t, ""))
 	require.NoError(t, err)
 
-	assert.Equal(t, "Whatomate", cfg.App.Name)
+	assert.Equal(t, "BANGLAB2BB2C", cfg.App.Name)
 	assert.Equal(t, "development", cfg.App.Environment)
 	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
 	assert.Equal(t, 8080, cfg.Server.Port)
@@ -98,8 +98,8 @@ secure = false
 }
 
 func TestLoad_EnvVarsOverrideFile(t *testing.T) {
-	t.Setenv("WHATOMATE_DATABASE_HOST", "from-env")
-	t.Setenv("WHATOMATE_SERVER_PORT", "1234")
+	t.Setenv("BANGLAB2BB2C_DATABASE_HOST", "from-env")
+	t.Setenv("BANGLAB2BB2C_SERVER_PORT", "1234")
 
 	cfg, err := config.Load(writeConfig(t, `
 [database]
@@ -109,14 +109,14 @@ host = "from-file"
 port = 8080
 `))
 	require.NoError(t, err)
-	assert.Equal(t, "from-env", cfg.Database.Host, "WHATOMATE_DATABASE_HOST must override file")
-	assert.Equal(t, 1234, cfg.Server.Port, "WHATOMATE_SERVER_PORT must override file")
+	assert.Equal(t, "from-env", cfg.Database.Host, "BANGLAB2BB2C_DATABASE_HOST must override file")
+	assert.Equal(t, 1234, cfg.Server.Port, "BANGLAB2BB2C_SERVER_PORT must override file")
 }
 
 func TestLoad_EmptyConfigPathStillLoadsDefaults(t *testing.T) {
 	cfg, err := config.Load("")
 	require.NoError(t, err)
-	assert.Equal(t, "Whatomate", cfg.App.Name)
+	assert.Equal(t, "BANGLAB2BB2C", cfg.App.Name)
 	assert.Equal(t, 8080, cfg.Server.Port)
 }
 

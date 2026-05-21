@@ -1,0 +1,1253 @@
+openapi: 3.1.0
+info:
+  title: BANGLAB2BB2C Support API
+  version: "0.1.0"
+  description: |
+    HTTP API for the BANGLAB2BB2C WhatsApp customer-support platform.
+
+    This document targets **mobile client developers** (Android, iOS, or
+    React Native). It covers the endpoints needed to authenticate, read and
+    write chats, manage agent presence, and receive realtime events.
+
+    ## Response envelope
+
+    Every JSON response (success or error) uses the same wrapper:
+
+    ```json
+    { "status": "success", "data": { ... } }
+    { "status": "error",   "message": "Invalid credentials", "data": null }
+    ```
+
+    ## Authentication
+
+    Tokens live in **httpOnly cookies** (`access_token`, `refresh_token`),
+    not in the response body. After `POST /api/auth/login` succeeds, your
+    HTTP client must retain those cookies and send them on every subsequent
+    request. A separate readable cookie `whm_csrf` is set; its value must
+    be echoed back as the `X-CSRF-Token` header on every mutating request
+    (POST / PUT / PATCH / DELETE).
+
+    Mobile native SDKs (NSURLSession, OkHttp, axios with `withCredentials`)
+    handle cookies transparently. If your runtime cannot persist cookies,
+    contact the backend team — a bearer-token mode would need a small
+    server change.
+
+    Access tokens expire after `expires_in` seconds (default 15 min). Call
+    `POST /api/auth/refresh` before then to mint a fresh pair.
+
+  contact:
+    name: BANGLAB2BB2C
+    email: admin@banglab2bb2c.local
+
+servers:
+  - url: https://b2bcs.tanzid.dev
+    description: Tunnel (dev)
+  - url: http://localhost:8081
+    description: Local dev (Docker)
+
+tags:
+  - name: Auth
+    description: Login, logout, refresh, current user.
+  - name: Contacts
+    description: Customer directory and conversation metadata.
+  - name: Messages
+    description: Send and read chat messages.
+  - name: Agent
+    description: Agent presence and transfers.
+  - name: Accounts
+    description: WhatsApp Business accounts attached to the org.
+  - name: Realtime
+    description: WebSocket auth and event reference.
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: |
+        httpOnly cookie set by `POST /api/auth/login`. Sent automatically by
+        any HTTP client that respects cookies.
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: |
+        Required on every mutating request. Value comes from the
+        non-httpOnly `whm_csrf` cookie set at login.
+
+  # ---------------------------------------------------------------------------
+  # Common envelopes & shared types
+  # ---------------------------------------------------------------------------
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [status, data]
+      properties:
+        status:
+          type: string
+          enum: [success]
+        data:
+          description: Endpoint-specific payload. See each operation.
+          nullable: true
+
+    ErrorEnvelope:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string
+          example: Invalid credentials
+        data:
+          nullable: true
+          example: null
+
+    UUID:
+      type: string
+      format: uuid
+      example: 0726fe3f-af77-4cb9-8e98-091283a42e43
+
+    Timestamp:
+      type: string
+      format: date-time
+      example: "2026-05-21T05:30:50.549258Z"
+
+    Permission:
+      type: object
+      properties:
+        resource:
+          type: string
+          example: contacts
+        action:
+          type: string
+          enum: [read, write, delete, assign]
+
+    Role:
+      type: object
+      properties:
+        id:        { $ref: "#/components/schemas/UUID" }
+        organization_id: { $ref: "#/components/schemas/UUID" }
+        name:
+          type: string
+          example: admin
+        description:
+          type: string
+        is_system:
+          type: boolean
+        is_default:
+          type: boolean
+        permissions:
+          type: array
+          items: { $ref: "#/components/schemas/Permission" }
+
+    User:
+      type: object
+      properties:
+        id:               { $ref: "#/components/schemas/UUID" }
+        organization_id:  { $ref: "#/components/schemas/UUID" }
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        role_id:
+          oneOf:
+            - { $ref: "#/components/schemas/UUID" }
+            - type: "null"
+        role:
+          oneOf:
+            - { $ref: "#/components/schemas/Role" }
+            - type: "null"
+        is_active:
+          type: boolean
+        is_available:
+          type: boolean
+          description: Agent presence — false means the agent is "Away" and won't receive new transfers.
+        is_super_admin:
+          type: boolean
+          description: Cross-org admin. Always false on BANGLAB2BB2C single-tenant deployments unless explicitly toggled.
+        settings:
+          type: object
+          additionalProperties: true
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+        updated_at: { $ref: "#/components/schemas/Timestamp" }
+
+    AuthLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@banglab2bb2c.local
+        password:
+          type: string
+          format: password
+          minLength: 12
+          example: admin12chars
+
+    AuthLoginData:
+      type: object
+      required: [expires_in, user]
+      properties:
+        expires_in:
+          type: integer
+          description: Access-token lifetime in seconds.
+          example: 900
+        user:
+          $ref: "#/components/schemas/User"
+
+    Pagination:
+      type: object
+      description: Standard pagination block returned alongside list payloads.
+      properties:
+        page:    { type: integer, example: 1 }
+        limit:   { type: integer, example: 50 }
+        total:   { type: integer, example: 1, description: Total rows across all pages. }
+
+    Tag:
+      type: object
+      properties:
+        id:    { $ref: "#/components/schemas/UUID" }
+        name:  { type: string, example: VIP }
+        color: { type: string, example: "#ef4444" }
+
+    Contact:
+      type: object
+      description: A WhatsApp customer the agent can chat with.
+      properties:
+        id:                  { $ref: "#/components/schemas/UUID" }
+        phone_number:
+          type: string
+          description: E.164 without the leading `+`.
+          example: "8801708915045"
+        name:                { type: string, example: "Tanzid" }
+        profile_name:
+          type: string
+          description: Name from the customer's own WhatsApp profile (read-only).
+        avatar_url:          { type: string }
+        status:
+          type: string
+          enum: [active, blocked, archived]
+        tags:
+          type: array
+          items: { $ref: "#/components/schemas/Tag" }
+        whatsapp_account:
+          type: string
+          description: Name of the WhatsApp Business account this contact arrived on.
+          example: "BANGLA B2B B2C"
+        assigned_user_id:
+          oneOf:
+            - { $ref: "#/components/schemas/UUID" }
+            - type: "null"
+        last_message_at:     { $ref: "#/components/schemas/Timestamp" }
+        last_message_preview:
+          type: string
+          example: "Hello, I need help"
+        unread_count:        { type: integer, example: 0 }
+        last_inbound_at:     { $ref: "#/components/schemas/Timestamp" }
+        service_window_open:
+          type: boolean
+          description: |
+            True if the customer messaged us within the last 24 hours — outside this window,
+            only approved template messages can be sent (WhatsApp policy).
+        marketing_opt_out:   { type: boolean }
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:          { $ref: "#/components/schemas/Timestamp" }
+        updated_at:          { $ref: "#/components/schemas/Timestamp" }
+
+    MessageContent:
+      type: object
+      description: Text body for text/template messages. Empty for media-only messages.
+      properties:
+        body:
+          type: string
+          example: "Hi! How can I help you today?"
+
+    Message:
+      type: object
+      description: A single chat message, inbound or outbound.
+      properties:
+        id:                { $ref: "#/components/schemas/UUID" }
+        contact_id:        { $ref: "#/components/schemas/UUID" }
+        direction:
+          type: string
+          enum: [incoming, outgoing]
+        message_type:
+          type: string
+          enum: [text, image, video, audio, document, sticker, location, contacts, template, interactive, reaction, unknown]
+        content:           { $ref: "#/components/schemas/MessageContent" }
+        media_url:
+          type: string
+          description: Relative URL to the media file on the BANGLAB2BB2C server. Prefix with the base URL to fetch.
+          example: "audio/43c64f71-7970-4144-98fc-e8dcc81e984a.webm"
+        media_mime_type:
+          type: string
+          example: "audio/webm;codecs=opus"
+        media_filename:
+          type: string
+          example: "voice-note-1779347354794.webm"
+        status:
+          type: string
+          enum: [pending, sent, delivered, read, failed]
+        wamid:
+          type: string
+          description: WhatsApp Message ID assigned by Meta after send.
+          example: "wamid.HBgNODg…"
+        error_message:
+          type: string
+          description: Populated when `status = failed`. Contains Meta's raw error JSON.
+        is_reply:          { type: boolean }
+        reply_to_message_id:
+          oneOf:
+            - { $ref: "#/components/schemas/UUID" }
+            - type: "null"
+        sent_by_user_id:
+          oneOf:
+            - { $ref: "#/components/schemas/UUID" }
+            - type: "null"
+          description: Agent who sent the message. Null for inbound or system-sent messages.
+        whatsapp_account:  { type: string, example: "BANGLA B2B B2C" }
+        created_at:        { $ref: "#/components/schemas/Timestamp" }
+        updated_at:        { $ref: "#/components/schemas/Timestamp" }
+
+    SendMessageRequest:
+      type: object
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          enum: [text, interactive]
+          description: |
+            `text` for plain chat. `interactive` for buttons / list / call-to-action / voice-call buttons.
+            For media (image/video/audio/document) use `POST /api/messages/media` instead.
+            For templates use `POST /api/messages/template`.
+        content:
+          type: object
+          properties:
+            body:
+              type: string
+              maxLength: 4096
+              example: "Sure — your order ships tomorrow."
+        reply_to_message_id:
+          type: string
+          format: uuid
+          description: Optional. Quote-reply to an existing message in this conversation.
+        whatsapp_account:
+          type: string
+          description: Override the contact's default WhatsApp account (rare).
+        interactive:
+          $ref: "#/components/schemas/InteractiveContent"
+
+    InteractiveContent:
+      type: object
+      description: Body of an interactive message. Only set when the outer `type` is `interactive`.
+      required: [type, body]
+      properties:
+        type:
+          type: string
+          enum: [button, list, cta_url, voice_call]
+        body:
+          type: string
+          maxLength: 1024
+        buttons:
+          type: array
+          description: For `type = button`. 1-3 reply buttons.
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id:    { type: string, example: "yes" }
+              title: { type: string, example: "Yes" }
+        button_text:
+          type: string
+          description: For `type = cta_url`. The button face label.
+        url:
+          type: string
+          description: For `type = cta_url`. The URL the button opens.
+        display_text:
+          type: string
+          description: For `type = voice_call`. Button face label.
+        ttl_minutes:
+          type: integer
+          description: For `type = voice_call`. How long the button stays clickable.
+
+    SendMediaForm:
+      type: object
+      description: |
+        Multipart form for `POST /api/messages/media`. Used by the voice-note recorder
+        and the regular attachment upload path.
+      required: [file, contact_id, type]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Binary upload. Max 16 MB (WhatsApp Cloud API limit).
+        contact_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [image, video, audio, document]
+        caption:
+          type: string
+          description: Optional. Voice notes ignore this field.
+        whatsapp_account:
+          type: string
+          description: Override the contact's default WhatsApp account (rare).
+
+    SendTemplateRequest:
+      type: object
+      description: |
+        Send a Meta-approved template message. Use this **outside** the 24-hour service
+        window — plain text messages will be rejected when `service_window_open = false`.
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+          description: Recipient. Either this OR `phone_number`.
+        phone_number:
+          type: string
+          description: |
+            E.164 without `+`. Use instead of `contact_id` to send to a new number without
+            creating a contact first.
+          example: "8801708915045"
+        template_name:
+          type: string
+          example: "order_shipped"
+        template_id:
+          type: string
+          format: uuid
+          description: Alternative to `template_name`.
+        template_params:
+          type: object
+          additionalProperties: { type: string }
+          description: |
+            Named or positional parameters. For positional templates use `"1"`, `"2"` keys.
+            For named templates use the variable name.
+          example: { "1": "Tanzid", "2": "B2B-4521" }
+        button_params:
+          type: object
+          additionalProperties: { type: string }
+          description: Button index → dynamic URL suffix for templates with URL buttons.
+        header_media_url:
+          type: string
+          description: Public URL for IMAGE/VIDEO/DOCUMENT header templates. Server downloads & uploads to Meta.
+        header_media_id:
+          type: string
+          description: Pre-uploaded Meta media ID (skips re-upload).
+        account_name:
+          type: string
+          description: Override the WhatsApp Business account used to send.
+
+    SendReactionRequest:
+      type: object
+      required: [emoji]
+      properties:
+        emoji:
+          type: string
+          description: Single emoji to react with. Empty string removes the reaction.
+          example: "👍"
+
+    AvailabilityRequest:
+      type: object
+      required: [is_available]
+      properties:
+        is_available:
+          type: boolean
+          description: |
+            `true` = agent is online and accepting transfers. `false` = "Away" — any
+            currently-assigned waiting transfers are returned to the team queue.
+
+    WhatsAppAccount:
+      type: object
+      description: |
+        A WhatsApp Business account attached to the org. Sensitive fields
+        (access_token, app_secret) are never returned — only boolean
+        `has_access_token` / `has_app_secret` flags.
+      properties:
+        id:                       { $ref: "#/components/schemas/UUID" }
+        name:                     { type: string, example: "BANGLA B2B B2C" }
+        app_id:                   { type: string, example: "1523237165837219" }
+        phone_id:                 { type: string, example: "1128158720377651" }
+        business_id:              { type: string, example: "1540375011433651" }
+        webhook_verify_token:     { type: string, description: "Echoed by Meta during webhook setup." }
+        api_version:              { type: string, example: "v25.0" }
+        is_default_incoming:      { type: boolean }
+        is_default_outgoing:      { type: boolean }
+        auto_read_receipt:        { type: boolean }
+        business_calling_enabled: { type: boolean }
+        status:
+          type: string
+          enum: [active, disabled, error]
+        has_access_token:         { type: boolean }
+        has_app_secret:           { type: boolean }
+        created_at:               { $ref: "#/components/schemas/Timestamp" }
+        updated_at:               { $ref: "#/components/schemas/Timestamp" }
+
+    AgentTransfer:
+      type: object
+      description: |
+        A chat handoff from the bot (or another agent) into the agent queue.
+        Pickable from `POST /api/chatbot/transfers/pick`.
+      properties:
+        id:               { $ref: "#/components/schemas/UUID" }
+        contact_id:       { $ref: "#/components/schemas/UUID" }
+        organization_id:  { $ref: "#/components/schemas/UUID" }
+        team_id:
+          oneOf:
+            - { $ref: "#/components/schemas/UUID" }
+            - type: "null"
+          description: Null = general queue. Set = team-specific queue.
+        assigned_agent_id:
+          oneOf:
+            - { $ref: "#/components/schemas/UUID" }
+            - type: "null"
+        status:
+          type: string
+          enum: [waiting, assigned, resumed, expired]
+        reason:
+          type: string
+          description: Why the transfer happened (e.g. "Customer requested human agent").
+        created_at:       { $ref: "#/components/schemas/Timestamp" }
+        updated_at:       { $ref: "#/components/schemas/Timestamp" }
+
+    WSToken:
+      type: object
+      properties:
+        token:
+          type: string
+          description: |
+            Short-lived JWT (≈ 30s TTL) used to authenticate the WebSocket
+            handshake. Append as `?token=…` when connecting.
+
+# ---------------------------------------------------------------------------
+# Reusable responses
+# ---------------------------------------------------------------------------
+  responses:
+    Unauthorized:
+      description: Not authenticated or session expired.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example: { status: error, message: "Unauthorized", data: null }
+    Forbidden:
+      description: Authenticated but lacks the required permission.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example: { status: error, message: "Insufficient permissions", data: null }
+    BadRequest:
+      description: Malformed request body or missing required fields.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    RateLimited:
+      description: |
+        Rate limit exceeded. Auth endpoints have per-IP limits configured
+        in `[rate_limit]` of `config.toml`.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example: { status: error, message: "Too many requests", data: null }
+
+# ---------------------------------------------------------------------------
+# Default security — overridden per-endpoint where login is public.
+# ---------------------------------------------------------------------------
+security:
+  - cookieAuth: []
+    csrfHeader: []
+
+paths:
+  # =========================================================================
+  # AUTH
+  # =========================================================================
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with email + password
+      description: |
+        Sets three cookies on success:
+        - `access_token` (httpOnly, lifetime = `expires_in` seconds)
+        - `refresh_token` (httpOnly, longer-lived)
+        - `whm_csrf` (readable; echo as `X-CSRF-Token` on mutating requests)
+
+        Returns the authenticated user object so the mobile client can
+        render the agent profile without an extra round-trip.
+
+        **Rate-limited** per-IP. Failed attempts run a dummy bcrypt
+        compare to prevent timing-based account enumeration, so latency
+        is similar for valid vs invalid emails.
+      security: []   # public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AuthLoginRequest" }
+      responses:
+        "200":
+          description: Login OK. Cookies are set; body returns the user.
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+              description: |
+                Three Set-Cookie headers: `access_token`, `refresh_token`, `whm_csrf`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthLoginData" }
+              example:
+                status: success
+                data:
+                  expires_in: 900
+                  user:
+                    id: 0726fe3f-af77-4cb9-8e98-091283a42e43
+                    email: admin@banglab2bb2c.local
+                    full_name: Admin
+                    organization_id: c9bae404-e66b-4bea-ab7b-49741f1c2207
+                    is_active: true
+                    is_available: true
+                    is_super_admin: true
+                    role:
+                      name: admin
+                      is_system: true
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: |
+            Wrong email/password OR the user account is disabled
+            (`is_active = false`). The same generic "Invalid credentials"
+            message is returned for both to prevent enumeration.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              example: { status: error, message: Invalid credentials, data: null }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Mint a fresh access token
+      description: |
+        Call this before `expires_in` elapses to keep the session alive.
+        Reads the `refresh_token` cookie set by `/api/auth/login` and
+        replaces both cookies with new ones.
+
+        The body field `refresh_token` is accepted only as a legacy fallback
+        for clients that can't persist cookies — prefer to send no body.
+      security: []   # cookie-only, no CSRF (refresh-token cookie is the credential)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+                  description: Optional. Server reads cookie first.
+      responses:
+        "200":
+          description: New cookies set, same `data` shape as `/api/auth/login`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthLoginData" }
+        "401":
+          description: Refresh token expired, revoked, or invalid. User must log in again.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out
+      description: Clears all auth cookies on the client. Always returns 200.
+      responses:
+        "200":
+          description: Cookies cleared.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: Logged out
+
+  /api/auth/switch-org:
+    post:
+      tags: [Auth]
+      summary: Switch the active organization
+      description: |
+        Re-issues tokens scoped to the requested organization.
+
+        **BANGLAB2BB2C is single-tenant**, so in practice the only org is
+        the one you logged into. Mobile clients can ignore this endpoint
+        unless they're hitting a multi-tenant deployment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organization_id]
+              properties:
+                organization_id: { $ref: "#/components/schemas/UUID" }
+      responses:
+        "200":
+          description: Switched. Same shape as login.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AuthLoginData" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: Organization not found, or user is not a member of it.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  /api/me:
+    get:
+      tags: [Auth]
+      summary: Get the currently authenticated user
+      description: |
+        Use this to (1) detect on app launch whether the saved session is
+        still valid, (2) refresh the cached user profile / permissions
+        after a permissions change.
+      responses:
+        "200":
+          description: Current user.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/me/availability:
+    put:
+      tags: [Agent]
+      summary: Set agent presence
+      description: |
+        Toggle the agent between **Available** (accepts new transfers) and
+        **Away** (does not). Going Away will return any currently-assigned
+        but still-waiting transfers back to the team queue so other agents
+        can pick them up.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AvailabilityRequest" }
+      responses:
+        "200":
+          description: Updated. Returns the count of transfers returned to queue (if any).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          is_available: { type: boolean }
+                          returned_transfers:
+                            type: integer
+                            description: How many active transfers were pushed back to the queue.
+                            example: 0
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # =========================================================================
+  # CONTACTS
+  # =========================================================================
+  /api/contacts:
+    get:
+      tags: [Contacts]
+      summary: List contacts (paginated)
+      description: |
+        Returns the contact directory scoped to the agent's permissions.
+        Agents without org-wide `contacts:read` only see contacts assigned
+        to them.
+
+        Use the `q` query param for free-text search across name and
+        phone number.
+      parameters:
+        - { name: page,  in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: q,     in: query, schema: { type: string }, description: "Free-text search." }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, blocked, archived] }
+        - name: assigned_user_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Filter to contacts assigned to this user. Use `me` to filter to self.
+        - name: whatsapp_account
+          in: query
+          schema: { type: string }
+          description: Filter by WhatsApp account name.
+      responses:
+        "200":
+          description: List + pagination metadata.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Pagination"
+                          - type: object
+                            properties:
+                              contacts:
+                                type: array
+                                items: { $ref: "#/components/schemas/Contact" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/contacts/{id}:
+    get:
+      tags: [Contacts]
+      summary: Get one contact
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Single contact.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Contact" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: Contact not found (or not visible to the requesting agent).
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } }
+
+  /api/contacts/{id}/mark-read:
+    post:
+      tags: [Contacts]
+      summary: Mark a conversation as read
+      description: |
+        Resets the contact's `unread_count` to 0 and sends WhatsApp read receipts
+        for any inbound messages still in `delivered` state.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Read.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message: { type: string, example: "Marked as read" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Contact not found. }
+
+  # =========================================================================
+  # MESSAGES
+  # =========================================================================
+  /api/contacts/{id}/messages:
+    get:
+      tags: [Messages]
+      summary: List messages in a conversation (paginated, newest first)
+      parameters:
+        - { name: id,    in: path,  required: true, schema: { type: string, format: uuid } }
+        - { name: page,  in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - name: before_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            For infinite-scroll: pass the oldest message ID currently rendered
+            to fetch the page immediately older.
+      responses:
+        "200":
+          description: Page of messages.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: "#/components/schemas/Pagination"
+                          - type: object
+                            properties:
+                              messages:
+                                type: array
+                                items: { $ref: "#/components/schemas/Message" }
+                              has_more:
+                                type: boolean
+                                description: True when older messages exist beyond this page.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Contact not found. }
+
+    post:
+      tags: [Messages]
+      summary: Send a text or interactive message
+      description: |
+        For media use `POST /api/messages/media`. For templates use
+        `POST /api/messages/template`.
+
+        If the contact's `service_window_open = false`, only templates will
+        succeed — calls here return 400 with a `Service window expired` error.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SendMessageRequest" }
+            examples:
+              text:
+                value:
+                  type: text
+                  content: { body: "Your order ships tomorrow." }
+              reply:
+                value:
+                  type: text
+                  content: { body: "Got it!" }
+                  reply_to_message_id: "a8e65aeb-1c34-46d3-903c-c53b23463d2e"
+              quick_reply_buttons:
+                value:
+                  type: interactive
+                  content: { body: "" }
+                  interactive:
+                    type: button
+                    body: "Was this helpful?"
+                    buttons:
+                      - { id: "yes", title: "Yes" }
+                      - { id: "no", title: "No" }
+      responses:
+        "200":
+          description: Message accepted (status starts as `pending`, transitions to `sent` then `delivered`/`read` via WebSocket updates).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Message" }
+        "400":
+          description: |
+            Bad request — common cases: empty body, service window closed (use a template),
+            interactive type missing required fields.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Contact not found. }
+
+  /api/contacts/{id}/messages/{message_id}/reaction:
+    post:
+      tags: [Messages]
+      summary: React to a message
+      description: |
+        Add or remove an emoji reaction. Pass empty string `""` for `emoji`
+        to remove an existing reaction.
+      parameters:
+        - { name: id,         in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: message_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SendReactionRequest" }
+      responses:
+        "200":
+          description: Reaction sent.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Message" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Contact or message not found. }
+
+  /api/messages/media:
+    post:
+      tags: [Messages]
+      summary: Send a media message (image / video / audio / document)
+      description: |
+        Multipart upload. The file is first stored on the BANGLAB2BB2C server
+        (path returned as `media_url`), then forwarded to Meta which assigns
+        the `wamid` on the next `delivered` event.
+
+        **Voice notes**: record opus audio in `audio/ogg;codecs=opus` (or
+        `audio/webm;codecs=opus` for browsers that lack ogg), pass `type=audio`,
+        omit `caption`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/SendMediaForm" }
+            encoding:
+              file:
+                contentType: image/*, video/*, audio/*, application/pdf, application/msword, application/vnd.openxmlformats-officedocument
+      responses:
+        "200":
+          description: Media accepted. Returned message starts as `pending`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Message" }
+        "400":
+          description: |
+            File too large (>16 MB), unsupported MIME, or missing required field.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/messages/template:
+    post:
+      tags: [Messages]
+      summary: Send an approved template message
+      description: |
+        Required for messaging customers **outside** the 24-hour service window.
+        The template must already be approved in Meta's Template Manager.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SendTemplateRequest" }
+            examples:
+              by_contact:
+                value:
+                  contact_id: "6921c75e-c50f-42cb-baaf-b1b7a877fbfd"
+                  template_name: "order_shipped"
+                  template_params: { "1": "Tanzid", "2": "B2B-4521" }
+              by_phone_with_url_button:
+                value:
+                  phone_number: "8801708915045"
+                  template_name: "appointment_reminder"
+                  template_params: { "name": "Tanzid", "time": "3 PM" }
+                  button_params: { "0": "/appt/abc123" }
+      responses:
+        "200":
+          description: Template message accepted.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/Message" }
+        "400":
+          description: Template not approved, params missing, or phone number malformed.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # =========================================================================
+  # ACCOUNTS
+  # =========================================================================
+  /api/accounts:
+    get:
+      tags: [Accounts]
+      summary: List WhatsApp Business accounts for this org
+      description: |
+        Mobile clients need this to know which `whatsapp_account` to pass
+        when sending from an account other than the contact's default.
+      responses:
+        "200":
+          description: All accounts.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accounts:
+                            type: array
+                            items: { $ref: "#/components/schemas/WhatsAppAccount" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # =========================================================================
+  # AGENT TRANSFERS (chatbot → agent handoff queue)
+  # =========================================================================
+  /api/chatbot/transfers:
+    get:
+      tags: [Agent]
+      summary: List agent transfers (incoming queue + assigned)
+      description: |
+        Shows transfers the agent can pick from the queue plus any already
+        assigned to them. Filtering depends on the agent's permissions and
+        team memberships.
+      parameters:
+        - { name: status,   in: query, schema: { type: string, enum: [waiting, assigned, resumed, expired] } }
+        - { name: team_id,  in: query, schema: { type: string, format: uuid } }
+        - { name: limit,    in: query, schema: { type: integer, default: 100, maximum: 500 } }
+        - { name: offset,   in: query, schema: { type: integer, default: 0 } }
+      responses:
+        "200":
+          description: Transfers and queue depth.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          transfers:
+                            type: array
+                            items: { $ref: "#/components/schemas/AgentTransfer" }
+                          total_count:         { type: integer }
+                          general_queue_count: { type: integer, description: "Transfers waiting in the general (no-team) queue." }
+                          team_queue_counts:
+                            type: object
+                            additionalProperties: { type: integer }
+                            description: "team_id → number of waiting transfers."
+                          limit:  { type: integer }
+                          offset: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/chatbot/transfers/pick:
+    post:
+      tags: [Agent]
+      summary: Claim the next waiting transfer from the queue
+      description: |
+        Atomically pops the oldest waiting transfer the agent is eligible for
+        (general queue + any teams the agent belongs to) and assigns it to
+        them. The matching contact's chatbot is paused.
+
+        Returns the claimed transfer + contact, or 404 when the queue is empty.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id:
+                  type: string
+                  format: uuid
+                  description: Optional. Restrict pick to a specific team queue.
+      responses:
+        "200":
+          description: Transfer claimed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          transfer: { $ref: "#/components/schemas/AgentTransfer" }
+                          contact:  { $ref: "#/components/schemas/Contact" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: No transfers waiting in any queue the agent can claim from.
+
+  /api/chatbot/transfers/{id}/resume:
+    put:
+      tags: [Agent]
+      summary: Hand the conversation back to the bot
+      description: |
+        Marks the transfer `resumed` and re-enables the chatbot for the contact.
+        Use this when the agent has resolved the issue and wants the bot to
+        handle future messages.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Resumed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AgentTransfer" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Transfer not found. }
+
+  # =========================================================================
+  # REALTIME (WebSocket auth)
+  # =========================================================================
+  /api/auth/ws-token:
+    get:
+      tags: [Realtime]
+      summary: Mint a short-lived WebSocket auth token
+      description: |
+        WebSocket connections **cannot send cookies on the handshake** from a
+        mobile client. Call this REST endpoint over your authenticated session
+        to get a short-lived JWT (~30s TTL).
+
+        1. `GET /api/auth/ws-token` → returns `{ token: "…" }`.
+        2. Open a WebSocket to `wss://b2bcs.tanzid.dev/ws`.
+        3. As the **first message**, send `{"type":"auth","payload":{"token":"<the-token>"}}`.
+        4. If the token is valid the server starts streaming events; otherwise the
+           connection is closed with a policy-violation close frame.
+
+        See the full event protocol at **[/docs/websocket](/docs/websocket)**.
+      responses:
+        "200":
+          description: Token.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/WSToken" }
+        "401": { $ref: "#/components/responses/Unauthorized" }

@@ -1,4 +1,4 @@
-module github.com/shridarpatil/whatomate
+module github.com/banglab2bb2c/banglab2bb2c
 
 go 1.25.0
 

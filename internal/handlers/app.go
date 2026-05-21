@@ -8,14 +8,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/shridarpatil/whatomate/internal/assignment"
-	"github.com/shridarpatil/whatomate/internal/calling"
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/queue"
-	"github.com/shridarpatil/whatomate/internal/storage"
-	"github.com/shridarpatil/whatomate/internal/tts"
-	"github.com/shridarpatil/whatomate/internal/websocket"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/assignment"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/calling"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/queue"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/storage"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/tts"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/websocket"
+	"github.com/banglab2bb2c/banglab2bb2c/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
@@ -106,7 +106,7 @@ func (a *App) getOrgID(r *fastglue.Request) (uuid.UUID, error) {
 func (a *App) HealthCheck(r *fastglue.Request) error {
 	return r.SendEnvelope(map[string]string{
 		"status":  "ok",
-		"service": "whatomate",
+		"service": "banglab2bb2c",
 	})
 }
 

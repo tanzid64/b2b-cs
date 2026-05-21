@@ -11,19 +11,20 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/shridarpatil/whatomate/internal/assignment"
-	"github.com/shridarpatil/whatomate/internal/calling"
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/database"
-	"github.com/shridarpatil/whatomate/internal/frontend"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	"github.com/shridarpatil/whatomate/internal/queue"
-	"github.com/shridarpatil/whatomate/internal/storage"
-	"github.com/shridarpatil/whatomate/internal/tts"
-	"github.com/shridarpatil/whatomate/internal/websocket"
-	"github.com/shridarpatil/whatomate/internal/worker"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/assignment"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/calling"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/database"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/docs"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/frontend"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/handlers"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/middleware"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/queue"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/storage"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/tts"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/websocket"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/worker"
+	"github.com/banglab2bb2c/banglab2bb2c/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
@@ -46,7 +47,7 @@ func main() {
 	case "worker":
 		runWorker(os.Args[2:])
 	case "version":
-		fmt.Printf("Whatomate %s (built %s)\n", Version, BuildTime)
+		fmt.Printf("BANGLAB2BB2C %s (built %s)\n", Version, BuildTime)
 	case "help", "-h", "--help":
 		printUsage()
 	default:
@@ -57,10 +58,10 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`Whatomate - WhatsApp Business API Platform
+	fmt.Println(`BANGLAB2BB2C - WhatsApp Business API Platform
 
 Usage:
-  whatomate <command> [options]
+  banglab2bb2c <command> [options]
 
 Commands:
   server    Start the API server (with optional embedded workers)
@@ -78,16 +79,16 @@ Worker Options:
   -workers int      Number of workers to run (default 1)
 
 Examples:
-  whatomate server                     # API + 1 embedded worker
-  whatomate server -workers 0          # API only (no workers)
-  whatomate server -workers 4          # API + 4 embedded workers
-  whatomate server -migrate            # Run migrations and start server
-  whatomate worker -workers 4          # 4 workers only (no API)
+  banglab2bb2c server                     # API + 1 embedded worker
+  banglab2bb2c server -workers 0          # API only (no workers)
+  banglab2bb2c server -workers 4          # API + 4 embedded workers
+  banglab2bb2c server -migrate            # Run migrations and start server
+  banglab2bb2c worker -workers 4          # 4 workers only (no API)
 
 Deployment Scenarios:
-  All-in-one:    whatomate server
-  Separate:      whatomate server -workers 0  (on API server)
-                 whatomate worker -workers 4  (on worker server)`)
+  All-in-one:    banglab2bb2c server
+  Separate:      banglab2bb2c server -workers 0  (on API server)
+                 banglab2bb2c worker -workers 4  (on worker server)`)
 }
 
 // ============================================================================
@@ -107,10 +108,10 @@ func runServer(args []string) {
 		Level:           logf.DebugLevel,
 		EnableCaller:    true,
 		TimestampFormat: "2006-01-02 15:04:05",
-		DefaultFields:   []any{"app", "whatomate"},
+		DefaultFields:   []any{"app", "banglab2bb2c"},
 	})
 
-	lo.Info("Starting Whatomate server...", "version", Version)
+	lo.Info("Starting BANGLAB2BB2C server...", "version", Version)
 
 	// Load configuration
 	cfg, err := config.Load(*configPath)
@@ -141,7 +142,7 @@ func runServer(args []string) {
 		lo = logf.New(logf.Opts{
 			Level:           logf.InfoLevel,
 			TimestampFormat: "2006-01-02 15:04:05",
-			DefaultFields:   []any{"app", "whatomate"},
+			DefaultFields:   []any{"app", "banglab2bb2c"},
 		})
 	}
 
@@ -264,7 +265,7 @@ func runServer(args []string) {
 		ReadTimeout:        time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout:       time.Duration(cfg.Server.WriteTimeout) * time.Second,
 		MaxRequestBodySize: 15 * 1024 * 1024,
-		Name:               "Whatomate",
+		Name:               "BANGLAB2BB2C",
 	}
 
 	// Start server in goroutine
@@ -361,10 +362,10 @@ func runWorker(args []string) {
 		Level:           logf.DebugLevel,
 		EnableCaller:    true,
 		TimestampFormat: "2006-01-02 15:04:05",
-		DefaultFields:   []any{"app", "whatomate-worker"},
+		DefaultFields:   []any{"app", "banglab2bb2c-worker"},
 	})
 
-	lo.Info("Starting Whatomate worker...", "version", Version)
+	lo.Info("Starting BANGLAB2BB2C worker...", "version", Version)
 
 	// Load configuration
 	cfg, err := config.Load(*configPath)
@@ -377,7 +378,7 @@ func runWorker(args []string) {
 		lo = logf.New(logf.Opts{
 			Level:           logf.InfoLevel,
 			TimestampFormat: "2006-01-02 15:04:05",
-			DefaultFields:   []any{"app", "whatomate-worker"},
+			DefaultFields:   []any{"app", "banglab2bb2c-worker"},
 		})
 	}
 
@@ -454,6 +455,13 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	// Health check
 	g.GET("/health", app.HealthCheck)
 	g.GET("/ready", app.ReadyCheck)
+
+	// API docs (Swagger UI). The router auto-redirects /docs ↔ /docs/.
+	// The YAML lives at /docs/openapi.yaml so swagger-ui-bundle.js fetches
+	// it as a relative URL.
+	g.GET("/docs", docs.IndexHandler)
+	g.GET("/docs/openapi.yaml", docs.SpecHandler)
+	g.GET("/docs/websocket", docs.WebSocketHandler)
 
 	// Auth routes (public, optionally rate-limited)
 	if cfg.RateLimit.Enabled {

@@ -10,9 +10,8 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader, AuditLogPanel } from '@/components/shared'
-import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import { toast } from 'vue-sonner'
-import { Settings, Bell, Loader2, Globe, Phone, Upload, Play, Pause, Music } from 'lucide-vue-next'
+import { Settings, Bell, Loader2, Phone, Upload, Play, Pause, Music } from 'lucide-vue-next'
 import { usersService, organizationService } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -282,14 +281,6 @@ function togglePlayAudio(type: 'hold_music' | 'ringback') {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                <div class="space-y-2">
-                  <Label class="text-white/70 light:text-gray-700">
-                    <Globe class="h-4 w-4 inline mr-1" />
-                    {{ $t('settings.language') }}
-                  </Label>
-                  <LanguageSwitcher class="max-w-xs" />
-                  <p class="text-xs text-white/40 light:text-gray-500">{{ $t('settings.languageDesc') }}</p>
                 </div>
                 <Separator class="bg-white/[0.08] light:bg-gray-200" />
                 <div class="flex items-center justify-between">

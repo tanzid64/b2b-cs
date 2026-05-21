@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shridarpatil/whatomate/internal/config"
-	"github.com/shridarpatil/whatomate/internal/handlers"
-	"github.com/shridarpatil/whatomate/internal/queue"
-	"github.com/shridarpatil/whatomate/pkg/whatsapp"
-	"github.com/shridarpatil/whatomate/test/testutil"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/handlers"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/queue"
+	"github.com/banglab2bb2c/banglab2bb2c/pkg/whatsapp"
+	"github.com/banglab2bb2c/banglab2bb2c/test/testutil"
 )
 
 // appOption configures an App for testing.

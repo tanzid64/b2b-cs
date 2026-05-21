@@ -5,10 +5,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/audit"
-	"github.com/shridarpatil/whatomate/internal/database"
-	"github.com/shridarpatil/whatomate/internal/models"
-	"github.com/shridarpatil/whatomate/internal/utils"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/audit"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/utils"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -347,104 +346,12 @@ type CreateOrganizationRequest struct {
 	Name string `json:"name"`
 }
 
-// CreateOrganization creates a new organization
+// CreateOrganization is disabled — this is a single-tenant build with one
+// seeded organization (BANGLAB2BB2C). The route is left registered so older
+// clients get an explicit 403 instead of silently succeeding.
 func (a *App) CreateOrganization(r *fastglue.Request) error {
-	_, userID, err := a.getOrgAndUserID(r)
-	if err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
-	}
-
-	if err := a.requirePermission(r, userID, models.ResourceOrganizations, models.ActionWrite); err != nil {
-		return nil
-	}
-
-	var req CreateOrganizationRequest
-	if err := a.decodeRequest(r, &req); err != nil {
-		return nil
-	}
-
-	if req.Name == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Organization name is required", nil, "")
-	}
-
-	// Start transaction
-	tx := a.DB.Begin()
-	if tx.Error != nil {
-		a.Log.Error("Failed to begin transaction", "error", tx.Error)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create organization", nil, "")
-	}
-
-	org := models.Organization{
-		Name:     req.Name,
-		Slug:     generateSlug(req.Name),
-		Settings: models.JSONB{},
-	}
-
-	if err := tx.Create(&org).Error; err != nil {
-		tx.Rollback()
-		a.Log.Error("Failed to create organization", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create organization", nil, "")
-	}
-
-	// Seed system roles for the new organization
-	if err := database.SeedSystemRolesForOrg(tx, org.ID); err != nil {
-		tx.Rollback()
-		a.Log.Error("Failed to seed system roles", "error", err, "org_id", org.ID)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create organization", nil, "")
-	}
-
-	// Create default chatbot settings
-	chatbotSettings := models.ChatbotSettings{
-		OrganizationID:     org.ID,
-		IsEnabled:          false,
-		SessionTimeoutMins: 30,
-	}
-	if err := tx.Create(&chatbotSettings).Error; err != nil {
-		tx.Rollback()
-		a.Log.Error("Failed to create chatbot settings", "error", err, "org_id", org.ID)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create organization", nil, "")
-	}
-
-	// Get admin role for this org and add the creator as admin
-	var adminRole models.CustomRole
-	if err := tx.Where("organization_id = ? AND name = ? AND is_system = ?", org.ID, "admin", true).First(&adminRole).Error; err != nil {
-		tx.Rollback()
-		a.Log.Error("Failed to find admin role", "error", err, "org_id", org.ID)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create organization", nil, "")
-	}
-
-	userOrg := models.UserOrganization{
-		UserID:         userID,
-		OrganizationID: org.ID,
-		RoleID:         &adminRole.ID,
-		IsDefault:      false,
-	}
-	if err := tx.Create(&userOrg).Error; err != nil {
-		tx.Rollback()
-		a.Log.Error("Failed to add creator to organization", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create organization", nil, "")
-	}
-
-	// Seed default dashboard widgets for the new organization
-	if err := database.SeedDefaultWidgetsForOrg(tx, org.ID, userID); err != nil {
-		tx.Rollback()
-		a.Log.Error("Failed to seed default widgets", "error", err, "org_id", org.ID)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create organization", nil, "")
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		a.Log.Error("Failed to commit transaction", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to create organization", nil, "")
-	}
-
-	a.Log.Info("Created organization", "org_id", org.ID, "org_name", org.Name, "created_by", userID)
-
-	return r.SendEnvelope(OrganizationResponse{
-		ID:        org.ID,
-		Name:      org.Name,
-		Slug:      org.Slug,
-		CreatedAt: org.CreatedAt.Format("2006-01-02T15:04:05Z"),
-	})
+	return r.SendErrorEnvelope(fasthttp.StatusForbidden,
+		"This deployment runs in single-tenant mode; creating additional organizations is disabled.", nil, "")
 }
 
 // MemberResponse represents an organization member in API responses

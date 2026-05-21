@@ -1,4 +1,4 @@
-// Package testutil provides shared test utilities for the whatomate project.
+// Package testutil provides shared test utilities for the banglab2bb2c project.
 package testutil
 
 import (

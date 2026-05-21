@@ -4,8 +4,8 @@ import (
 	"github.com/fasthttp/websocket"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/shridarpatil/whatomate/internal/middleware"
-	ws "github.com/shridarpatil/whatomate/internal/websocket"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/middleware"
+	ws "github.com/banglab2bb2c/banglab2bb2c/internal/websocket"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
