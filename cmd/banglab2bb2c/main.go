@@ -805,6 +805,10 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	g.PUT("/api/products/{id}", app.UpdateCatalogProduct)
 	g.DELETE("/api/products/{id}", app.DeleteCatalogProduct)
 
+	// Public project proposal page (sales material). Registered before the
+	// SPA catch-all so the Vue router doesn't try to handle it.
+	g.GET("/project-proposal", app.ProjectProposal)
+
 	// Serve embedded frontend (SPA)
 	if frontend.IsEmbedded() {
 		lo.Info("Serving embedded frontend", "base_path", basePath)
