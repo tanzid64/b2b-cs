@@ -19,8 +19,6 @@ import {
   Shield,
   LineChart,
   Tags,
-  PhoneCall,
-  PhoneForwarded,
   ScrollText
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
@@ -98,15 +96,6 @@ export const navigationSections: NavSection[] = [
         icon: Workflow,
         permission: 'flows.whatsapp'
       },
-    ]
-  },
-  {
-    label: 'nav.sectionCalling',
-    permissions: ['call_logs', 'ivr_flows', 'call_transfers'],
-    items: [
-      { name: 'nav.callLogs', path: '/calling/logs', icon: PhoneCall, permission: 'call_logs' },
-      { name: 'nav.ivrFlows', path: '/calling/ivr-flows', icon: Workflow, permission: 'ivr_flows' },
-      { name: 'nav.callTransfers', path: '/calling/transfers', icon: PhoneForwarded, permission: 'call_transfers' },
     ]
   },
   {

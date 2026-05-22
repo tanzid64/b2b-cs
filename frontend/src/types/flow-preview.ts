@@ -3,11 +3,9 @@
 export interface ButtonConfig {
   id: string
   title: string
-  type?: 'reply' | 'url' | 'phone' | 'voice_call'
+  type?: 'reply' | 'url' | 'phone'
   url?: string
   phone_number?: string
-  /** voice_call only: how long the button stays clickable; 0 = Meta default (15m). */
-  ttl_minutes?: number
 }
 
 export interface ApiConfig {

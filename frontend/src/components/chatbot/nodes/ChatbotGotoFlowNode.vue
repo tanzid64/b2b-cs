@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ExternalLink } from 'lucide-vue-next'
-import BaseNode from '@/components/calling/nodes/BaseNode.vue'
+import BaseNode from './BaseNode.vue'
 
 defineOptions({ inheritAttrs: false })
 

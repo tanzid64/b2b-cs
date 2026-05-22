@@ -563,17 +563,11 @@ type SendMessageRequest struct {
 
 // InteractiveContent holds interactive message data
 type InteractiveContent struct {
-	Type       string          `json:"type"`                  // "button", "list", "cta_url", "voice_call"
+	Type       string          `json:"type"`                  // "button", "list", "cta_url"
 	Body       string          `json:"body"`                  // Body text
 	Buttons    []ButtonContent `json:"buttons,omitempty"`     // For button type
 	ButtonText string          `json:"button_text,omitempty"` // For cta_url type
 	URL        string          `json:"url,omitempty"`         // For cta_url type
-	// voice_call only: button face label and clickable TTL.
-	// The payload (round-trip opaque string Meta echoes back on the incoming-
-	// call webhook) is set server-side from the auth context — never from the
-	// request body — to prevent agent-id spoofing.
-	DisplayText string `json:"display_text,omitempty"`
-	TTLMinutes  int    `json:"ttl_minutes,omitempty"`
 }
 
 // ButtonContent represents a button in interactive messages
@@ -660,23 +654,8 @@ func (a *App) SendMessage(r *fastglue.Request) error {
 		}
 
 		if req.Interactive.Type == "voice_call" {
-			if !account.BusinessCallingEnabled {
-				return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
-					"This WhatsApp account is not enrolled in the Business Calling API. Enable it under Settings → Accounts before sending Call buttons.",
-					nil, "")
-			}
-			msgReq.DisplayText = req.Interactive.DisplayText
-			msgReq.TTLMinutes = req.Interactive.TTLMinutes
-			// Stamp the payload server-side so the incoming-call webhook can
-			// sticky-route the resulting call back to the agent who sent it.
-			// Never trust a client-supplied payload — would let any agent
-			// impersonate any other.
-			msgReq.VoiceCallPayload = "agent:" + userID.String()
-			// Pre-register the sticky-routing intent in Redis so that the
-			// resulting incoming-call webhook can resolve the originating
-			// agent in O(1) (Meta does not currently echo the payload).
-			// TTL matches the button's clickable lifetime.
-			a.MarkPendingStickyCall(context.Background(), orgID, contact.PhoneNumber, userID, req.Interactive.TTLMinutes)
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
+				"Voice call buttons are not supported in this deployment.", nil, "")
 		}
 	}
 

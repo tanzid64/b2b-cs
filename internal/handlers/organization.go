@@ -24,28 +24,11 @@ func generalSettingsSnapshot(name string, settings models.JSONB) map[string]any 
 	}
 }
 
-// callingSettingsSnapshot extracts the fields shown on the Calling tab into a
-// map suitable for audit diffing.
-func callingSettingsSnapshot(settings models.JSONB) map[string]any {
-	return map[string]any{
-		"calling_enabled":       settings["calling_enabled"],
-		"max_call_duration":     settings["max_call_duration"],
-		"transfer_timeout_secs": settings["transfer_timeout_secs"],
-		"hold_music_file":       settings["hold_music_file"],
-		"ringback_file":         settings["ringback_file"],
-	}
-}
-
 // OrganizationSettings represents the settings structure
 type OrganizationSettings struct {
-	MaskPhoneNumbers    bool   `json:"mask_phone_numbers"`
-	Timezone            string `json:"timezone"`
-	DateFormat          string `json:"date_format"`
-	CallingEnabled      bool   `json:"calling_enabled"`
-	MaxCallDuration     int    `json:"max_call_duration"`
-	TransferTimeoutSecs int    `json:"transfer_timeout_secs"`
-	HoldMusicFile       string `json:"hold_music_file"`
-	RingbackFile        string `json:"ringback_file"`
+	MaskPhoneNumbers bool   `json:"mask_phone_numbers"`
+	Timezone         string `json:"timezone"`
+	DateFormat       string `json:"date_format"`
 }
 
 // GetOrganizationSettings returns the organization settings
@@ -62,14 +45,9 @@ func (a *App) GetOrganizationSettings(r *fastglue.Request) error {
 
 	// Parse settings from JSONB
 	settings := OrganizationSettings{
-		MaskPhoneNumbers:    false,
-		Timezone:            "UTC",
-		DateFormat:          "YYYY-MM-DD",
-		CallingEnabled:      false,
-		MaxCallDuration:     callingConfigDefault(a.Config.Calling.MaxCallDuration, 3600),
-		TransferTimeoutSecs: callingConfigDefault(a.Config.Calling.TransferTimeoutSecs, 60),
-		HoldMusicFile:       a.Config.Calling.HoldMusicFile,
-		RingbackFile:        a.Config.Calling.RingbackFile,
+		MaskPhoneNumbers: false,
+		Timezone:         "UTC",
+		DateFormat:       "YYYY-MM-DD",
 	}
 
 	if org.Settings != nil {
@@ -81,21 +59,6 @@ func (a *App) GetOrganizationSettings(r *fastglue.Request) error {
 		}
 		if v, ok := org.Settings["date_format"].(string); ok && v != "" {
 			settings.DateFormat = v
-		}
-		if v, ok := org.Settings["calling_enabled"].(bool); ok {
-			settings.CallingEnabled = v
-		}
-		if v, ok := org.Settings["max_call_duration"].(float64); ok && v > 0 {
-			settings.MaxCallDuration = int(v)
-		}
-		if v, ok := org.Settings["transfer_timeout_secs"].(float64); ok && v > 0 {
-			settings.TransferTimeoutSecs = int(v)
-		}
-		if v, ok := org.Settings["hold_music_file"].(string); ok && v != "" {
-			settings.HoldMusicFile = v
-		}
-		if v, ok := org.Settings["ringback_file"].(string); ok && v != "" {
-			settings.RingbackFile = v
 		}
 	}
 
@@ -113,15 +76,10 @@ func (a *App) UpdateOrganizationSettings(r *fastglue.Request) error {
 	}
 
 	var req struct {
-		MaskPhoneNumbers    *bool   `json:"mask_phone_numbers"`
-		Timezone            *string `json:"timezone"`
-		DateFormat          *string `json:"date_format"`
-		Name                *string `json:"name"`
-		CallingEnabled      *bool   `json:"calling_enabled"`
-		MaxCallDuration     *int    `json:"max_call_duration"`
-		TransferTimeoutSecs *int    `json:"transfer_timeout_secs"`
-		HoldMusicFile       *string `json:"hold_music_file"`
-		RingbackFile        *string `json:"ringback_file"`
+		MaskPhoneNumbers *bool   `json:"mask_phone_numbers"`
+		Timezone         *string `json:"timezone"`
+		DateFormat       *string `json:"date_format"`
+		Name             *string `json:"name"`
 	}
 
 	if err := json.Unmarshal(r.RequestCtx.PostBody(), &req); err != nil {
@@ -133,13 +91,10 @@ func (a *App) UpdateOrganizationSettings(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusNotFound, "Organization not found", nil, "")
 	}
 
-	// Snapshot before mutation so we can compute per-tab diffs.
+	// Snapshot before mutation so we can compute a diff.
 	oldGeneral := generalSettingsSnapshot(org.Name, org.Settings)
-	oldCalling := callingSettingsSnapshot(org.Settings)
 
-	// Track which tabs received updates so we only audit the relevant ones.
 	generalTouched := req.MaskPhoneNumbers != nil || req.Timezone != nil || req.DateFormat != nil || (req.Name != nil && *req.Name != "")
-	callingTouched := req.CallingEnabled != nil || req.MaxCallDuration != nil || req.TransferTimeoutSecs != nil || req.HoldMusicFile != nil || req.RingbackFile != nil
 
 	// Update settings
 	if org.Settings == nil {
@@ -155,21 +110,6 @@ func (a *App) UpdateOrganizationSettings(r *fastglue.Request) error {
 	if req.DateFormat != nil {
 		org.Settings["date_format"] = *req.DateFormat
 	}
-	if req.CallingEnabled != nil {
-		org.Settings["calling_enabled"] = *req.CallingEnabled
-	}
-	if req.MaxCallDuration != nil && *req.MaxCallDuration > 0 {
-		org.Settings["max_call_duration"] = *req.MaxCallDuration
-	}
-	if req.TransferTimeoutSecs != nil && *req.TransferTimeoutSecs > 0 {
-		org.Settings["transfer_timeout_secs"] = *req.TransferTimeoutSecs
-	}
-	if req.HoldMusicFile != nil {
-		org.Settings["hold_music_file"] = *req.HoldMusicFile
-	}
-	if req.RingbackFile != nil {
-		org.Settings["ringback_file"] = *req.RingbackFile
-	}
 	if req.Name != nil && *req.Name != "" {
 		org.Name = *req.Name
 	}
@@ -179,81 +119,16 @@ func (a *App) UpdateOrganizationSettings(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to update settings", nil, "")
 	}
 
-	if a.CallManager != nil {
-		a.CallManager.InvalidateOrgCallingSettingsCache(orgID)
-	}
-
-	// Emit per-tab audit entries. LogAudit is a no-op when there are zero changes.
-	userName := audit.GetUserName(a.DB, userID)
 	if generalTouched {
+		userName := audit.GetUserName(a.DB, userID)
 		newGeneral := generalSettingsSnapshot(org.Name, org.Settings)
 		audit.LogAudit(a.DB, orgID, userID, userName,
 			models.ResourceSettingsGeneral, orgID, models.AuditActionUpdated, oldGeneral, newGeneral)
-	}
-	if callingTouched {
-		newCalling := callingSettingsSnapshot(org.Settings)
-		audit.LogAudit(a.DB, orgID, userID, userName,
-			models.ResourceSettingsCalling, orgID, models.AuditActionUpdated, oldCalling, newCalling)
 	}
 
 	return r.SendEnvelope(map[string]any{
 		"message": "Settings updated successfully",
 	})
-}
-
-// IsCallingEnabledForOrg checks if calling is enabled for an organization.
-// Both the global CallManager and the per-org setting must be active.
-func (a *App) IsCallingEnabledForOrg(orgID any) bool {
-	if a.CallManager == nil {
-		return false
-	}
-	var org models.Organization
-	if err := a.DB.Where("id = ?", orgID).First(&org).Error; err != nil {
-		return false
-	}
-	if org.Settings != nil {
-		if v, ok := org.Settings["calling_enabled"].(bool); ok {
-			return v
-		}
-	}
-	return false
-}
-
-// requireCallingEnabled checks if calling is enabled for the org and returns an error
-// envelope if not. Returns nil when calling is enabled and the handler can proceed.
-func (a *App) requireCallingEnabled(r *fastglue.Request, orgID uuid.UUID) error {
-	if !a.IsCallingEnabledForOrg(orgID) {
-		return r.SendErrorEnvelope(fasthttp.StatusServiceUnavailable, "Calling is not enabled for this organization", nil, "")
-	}
-	return nil
-}
-
-// GetOrgCallingConfig returns org-level calling config values, falling back to global defaults.
-func (a *App) GetOrgCallingConfig(orgID any) (maxDuration, transferTimeout int) {
-	maxDuration = callingConfigDefault(a.Config.Calling.MaxCallDuration, 3600)
-	transferTimeout = callingConfigDefault(a.Config.Calling.TransferTimeoutSecs, 60)
-
-	var org models.Organization
-	if err := a.DB.Where("id = ?", orgID).First(&org).Error; err != nil {
-		return
-	}
-	if org.Settings != nil {
-		if v, ok := org.Settings["max_call_duration"].(float64); ok && v > 0 {
-			maxDuration = int(v)
-		}
-		if v, ok := org.Settings["transfer_timeout_secs"].(float64); ok && v > 0 {
-			transferTimeout = int(v)
-		}
-	}
-	return
-}
-
-// callingConfigDefault returns val if positive, otherwise fallback.
-func callingConfigDefault(val, fallback int) int {
-	if val > 0 {
-		return val
-	}
-	return fallback
 }
 
 // MaskContactFields conditionally masks a profile name and phone number

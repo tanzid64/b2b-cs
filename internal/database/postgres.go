@@ -109,11 +109,6 @@ func GetMigrationModels() []MigrationModel {
 		// Conversation Notes
 		{"ConversationNote", &models.ConversationNote{}},
 
-		// Calling / IVR
-		{"CallLog", &models.CallLog{}},
-		{"IVRFlow", &models.IVRFlow{}},
-		{"CallTransfer", &models.CallTransfer{}},
-		{"CallPermission", &models.CallPermission{}},
 		{"AuditLog", &models.AuditLog{}},
 	}
 }
@@ -124,6 +119,26 @@ func AutoMigrate(db *gorm.DB) error {
 	for _, m := range migrationModels {
 		if err := db.AutoMigrate(m.Model); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// DropDeprecatedCallingTables removes the WhatsApp Calling / IVR schema that
+// existed when the upstream Whatomate codebase shipped voice features. This
+// fork no longer supports calling — the tables and the per-account toggle
+// are dropped on every migration run. Each statement is idempotent.
+func DropDeprecatedCallingTables(db *gorm.DB) error {
+	stmts := []string{
+		`DROP TABLE IF EXISTS call_permissions CASCADE`,
+		`DROP TABLE IF EXISTS call_transfers CASCADE`,
+		`DROP TABLE IF EXISTS call_logs CASCADE`,
+		`DROP TABLE IF EXISTS ivr_flows CASCADE`,
+		`ALTER TABLE whatsapp_accounts DROP COLUMN IF EXISTS business_calling_enabled`,
+	}
+	for _, s := range stmts {
+		if err := db.Exec(s).Error; err != nil {
+			return fmt.Errorf("drop calling schema: %w", err)
 		}
 	}
 	return nil
@@ -172,6 +187,12 @@ func RunMigrationWithProgress(db *gorm.DB, adminCfg *config.DefaultAdminConfig) 
 			return fmt.Errorf("failed to create index: %w", err)
 		}
 		currentStep++
+	}
+
+	// Drop deprecated calling/IVR schema (idempotent — no-op once gone).
+	if err := DropDeprecatedCallingTables(silentDB); err != nil {
+		fmt.Printf("\n  \033[31m✗ Failed to drop deprecated calling tables\033[0m\n\n")
+		return err
 	}
 
 	// Seed permissions (always run, will skip if already seeded)
@@ -278,13 +299,6 @@ func getIndexes() []string {
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_org_unique ON user_organizations(user_id, organization_id) WHERE deleted_at IS NULL`,
 		// Conversation notes
 		`CREATE INDEX IF NOT EXISTS idx_conversation_notes_contact ON conversation_notes(organization_id, contact_id, created_at DESC)`,
-		// Call logs
-		`CREATE INDEX IF NOT EXISTS idx_call_logs_org_status ON call_logs(organization_id, status, created_at DESC)`,
-		`CREATE INDEX IF NOT EXISTS idx_call_logs_contact ON call_logs(contact_id, created_at DESC)`,
-		`CREATE INDEX IF NOT EXISTS idx_call_logs_wa_call_id ON call_logs(whatsapp_call_id) WHERE whatsapp_call_id != ''`,
-		// IVR flows
-		`CREATE INDEX IF NOT EXISTS idx_ivr_flows_org_active ON ivr_flows(organization_id, whatsapp_account, is_active)`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_ivr_flows_org_call_start ON ivr_flows(organization_id, whatsapp_account) WHERE is_call_start = true AND is_active = true AND deleted_at IS NULL`,
 	}
 }
 

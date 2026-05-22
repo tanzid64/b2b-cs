@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Reply, ExternalLink, Phone, PhoneCall, Trash2 } from 'lucide-vue-next'
+import { Reply, ExternalLink, Phone, Trash2 } from 'lucide-vue-next'
 import type { ButtonConfig } from '@/types/flow-preview'
 
-type ButtonType = 'reply' | 'url' | 'phone' | 'voice_call'
+type ButtonType = 'reply' | 'url' | 'phone'
 
 const props = withDefaults(
   defineProps<{
@@ -36,8 +36,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 // WhatsApp rules: reply buttons (1-3) and CTA buttons (url/phone, max 2) can't mix.
-// voice_call (interactive.type:"voice_call") is exclusive — it can't coexist with
-// any other button type and only one is allowed per message.
 const hasReplyButtons = computed(() =>
   props.buttons.some((b) => !b.type || b.type === 'reply'),
 )
@@ -46,10 +44,8 @@ const ctaCount = computed(() =>
 )
 const hasCtaButtons = computed(() => ctaCount.value > 0)
 const ctaLimitReached = computed(() => ctaCount.value >= 2)
-const hasVoiceCallButton = computed(() => props.buttons.some((b) => b.type === 'voice_call'))
 
 const effectiveMax = computed(() => {
-  if (hasVoiceCallButton.value) return 1
   if (hasCtaButtons.value) return 2
   return props.maxButtons
 })
@@ -68,7 +64,6 @@ function addButton(type: ButtonType) {
   }
   if (type === 'url') newButton.url = ''
   else if (type === 'phone') newButton.phone_number = ''
-  else if (type === 'voice_call') newButton.ttl_minutes = 15
   emitButtons([...props.buttons, newButton])
 }
 
@@ -85,8 +80,6 @@ function updateButton(index: number, patch: Partial<ButtonConfig>) {
 
 function canAdd(type: ButtonType): boolean {
   if (props.disabled) return false
-  if (hasVoiceCallButton.value) return false
-  if (type === 'voice_call') return props.buttons.length === 0
   if (props.buttons.length >= effectiveMax.value) return false
   if (type === 'reply') return !hasCtaButtons.value
   // url / phone
@@ -96,14 +89,12 @@ function canAdd(type: ButtonType): boolean {
 function typeLabel(type?: string): string {
   if (type === 'url') return 'URL'
   if (type === 'phone') return t('flowBuilder.phoneButton', 'Phone')
-  if (type === 'voice_call') return t('flowBuilder.voiceCallButton', 'Call')
   return t('flowBuilder.replyButton', 'Reply')
 }
 
 function typeIcon(type?: string) {
   if (type === 'url') return ExternalLink
   if (type === 'phone') return Phone
-  if (type === 'voice_call') return PhoneCall
   return Reply
 }
 </script>
@@ -147,17 +138,6 @@ function typeIcon(type?: string) {
         >
           <Phone class="h-3 w-3 mr-1" />
           {{ $t('flowBuilder.phoneButton', 'Phone') }}
-        </Button>
-        <Button
-          v-if="allowedTypes.includes('voice_call')"
-          variant="outline"
-          size="sm"
-          class="h-6 text-xs"
-          :disabled="!canAdd('voice_call')"
-          @click="addButton('voice_call')"
-        >
-          <PhoneCall class="h-3 w-3 mr-1" />
-          {{ $t('flowBuilder.voiceCallButton', 'Call') }}
         </Button>
       </div>
     </div>
@@ -208,23 +188,6 @@ function typeIcon(type?: string) {
             :disabled="disabled"
             @update:model-value="updateButton(idx, { phone_number: String($event) })"
           />
-        </div>
-        <div v-else-if="btn.type === 'voice_call'" class="flex items-center gap-2">
-          <Label class="text-[10px] text-muted-foreground shrink-0">
-            {{ $t('flowBuilder.voiceCallTtl', 'Expires after') }}
-          </Label>
-          <Input
-            type="number"
-            min="1"
-            max="60"
-            :model-value="btn.ttl_minutes ?? 15"
-            class="h-7 w-16 text-xs"
-            :disabled="disabled"
-            @update:model-value="updateButton(idx, { ttl_minutes: Number($event) || 0 })"
-          />
-          <span class="text-[10px] text-muted-foreground">
-            {{ $t('flowBuilder.voiceCallTtlSuffix', 'minutes (1–60)') }}
-          </span>
         </div>
         <div v-else-if="showIdField">
           <Input

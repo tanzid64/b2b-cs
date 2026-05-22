@@ -149,8 +149,8 @@ func (a *App) runChatGraph(
 
 		// goto_flow may have switched the session to a different flow.
 		// Reload graph + flow and continue at the new entry node within
-		// the same run, mirroring IVR's executeGotoFlow recursion. The
-		// outer loop's max-iteration guard prevents A→B→A pathologies.
+		// the same run. The outer loop's max-iteration guard prevents
+		// A→B→A pathologies.
 		if session.CurrentFlowID != nil && *session.CurrentFlowID != flow.ID {
 			newFlow, err := a.getChatbotFlowByIDCached(account.OrganizationID, *session.CurrentFlowID)
 			if err != nil {
@@ -514,8 +514,7 @@ func evaluateConditionExpression(expression string, data models.JSONB) (bool, er
 }
 
 // execChatTiming routes "in_hours" / "out_of_hours" based on a per-day
-// schedule. Mirrors IVR's executeTiming (internal/calling/ivr.go:539).
-// Non-blocking; no message sent.
+// schedule. Non-blocking; no message sent.
 //
 // Config:
 //
@@ -526,8 +525,7 @@ func evaluateConditionExpression(expression string, data models.JSONB) (bool, er
 //	  ]
 //	}
 //
-// Days not listed in the schedule are treated as out_of_hours, matching
-// IVR's behavior.
+// Days not listed in the schedule are treated as out_of_hours.
 func (a *App) execChatTiming(node *ChatNode, ctx *chatNodeCtx) (nodeOutcome, error) {
 	rawSchedule, _ := node.Config["schedule"].([]any)
 	outcome := evaluateTimingSchedule(time.Now(), rawSchedule, a.Log)
@@ -765,10 +763,9 @@ func (a *App) execChatWebhook(node *ChatNode, ctx *chatNodeCtx) (nodeOutcome, er
 // organization + WhatsApp account. SessionData (variables, path) is
 // carried forward — this is the whole point of sub-flows.
 //
-// Mirrors IVR's executeGotoFlow (internal/calling/ivr.go:495). Not a
-// "call" — there's no return stack — so once the target flow ends, the
-// session ends. The runner detects the CurrentFlowID change and reloads
-// the graph + entry node within the same webhook run.
+// Not a "call" — there's no return stack — so once the target flow ends,
+// the session ends. The runner detects the CurrentFlowID change and
+// reloads the graph + entry node within the same webhook run.
 //
 // Config:
 //
@@ -934,8 +931,6 @@ func (a *App) persistChatSession(s *models.ChatbotSession) error {
 }
 
 // appendChatPath records the executed node + outcome in SessionData["__path__"].
-// The shape mirrors IVRContext.Path so frontends and audit tooling can
-// render either domain's trail with the same code.
 func appendChatPath(s *models.ChatbotSession, node *ChatNode, outcome string) {
 	if s.SessionData == nil {
 		s.SessionData = models.JSONB{}

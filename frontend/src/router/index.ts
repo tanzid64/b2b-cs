@@ -299,34 +299,6 @@ const router = createRouter({
           component: () => import('@/views/settings/AuditLogDetailView.vue'),
           meta: { permission: 'audit_logs' }
         },
-        {
-          path: 'calling',
-          redirect: '/calling/logs'
-        },
-        {
-          path: 'calling/logs',
-          name: 'call-logs',
-          component: () => import('@/views/calling/CallLogsView.vue'),
-          meta: { permission: 'call_logs' }
-        },
-        {
-          path: 'calling/ivr-flows',
-          name: 'ivr-flows',
-          component: () => import('@/views/calling/IVRFlowsView.vue'),
-          meta: { permission: 'ivr_flows' }
-        },
-        {
-          path: 'calling/ivr-flows/:id/edit',
-          name: 'ivr-flow-editor',
-          component: () => import('@/views/calling/IVRFlowEditorView.vue'),
-          meta: { permission: 'ivr_flows' }
-        },
-        {
-          path: 'calling/transfers',
-          name: 'call-transfers',
-          component: () => import('@/views/calling/CallTransfersView.vue'),
-          meta: { permission: 'call_transfers' }
-        }
       ]
     },
     {
@@ -354,11 +326,6 @@ const navigationOrder = [
   { path: '/templates', permission: 'templates' },
   { path: '/flows', permission: 'flows.whatsapp' },
   { path: '/campaigns', permission: 'campaigns' },
-  { path: '/calling/logs', permission: 'call_logs', childPaths: [
-    { path: '/calling/logs', permission: 'call_logs' },
-    { path: '/calling/ivr-flows', permission: 'ivr_flows' },
-    { path: '/calling/transfers', permission: 'call_transfers' }
-  ]},
   { path: '/settings', permission: 'settings.general', childPaths: [
     { path: '/settings', permission: 'settings.general' },
     { path: '/settings/chatbot', permission: 'settings.chatbot' },

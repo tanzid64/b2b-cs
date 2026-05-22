@@ -12,8 +12,7 @@ import (
 )
 
 // LoadCounter counts the number of active items per agent. Callers provide a
-// domain-specific implementation: chat transfers count AgentTransfer rows while
-// call transfers count CallTransfer rows.
+// domain-specific implementation (e.g., chat transfers count AgentTransfer rows).
 type LoadCounter func(db *gorm.DB, orgID uuid.UUID, agentIDs []uuid.UUID) map[uuid.UUID]int64
 
 // Assigner provides team-based agent assignment with caching.
@@ -30,8 +29,8 @@ func New(db *gorm.DB, redis *redis.Client, log logf.Logger) *Assigner {
 
 // AssignToTeam dispatches to the appropriate strategy based on the team's
 // AssignmentStrategy. excludeAgentIDs allows callers to skip agents that have
-// already been tried (e.g., during call transfer rotation). Pass nil for normal
-// use. loadCounter provides the domain-specific load counting function for the
+// already been tried during transfer rotation. Pass nil for normal use.
+// loadCounter provides the domain-specific load counting function for the
 // load_balanced strategy.
 func (a *Assigner) AssignToTeam(teamID, orgID uuid.UUID, excludeAgentIDs []uuid.UUID, loadCounter LoadCounter) *uuid.UUID {
 	cfg := a.GetTeamConfig(teamID)

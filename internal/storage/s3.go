@@ -12,7 +12,7 @@ import (
 	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
 )
 
-// S3Client provides upload and presigned URL operations for call recordings.
+// S3Client provides upload and presigned URL operations for media.
 type S3Client struct {
 	client *s3.Client
 	bucket string

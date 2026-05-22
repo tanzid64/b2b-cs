@@ -52,7 +52,6 @@ const (
 	ResourceSettingsGeneral      = "settings.general"
 	ResourceSettingsChatbot      = "settings.chatbot"
 	ResourceSettingsSSO          = "settings.sso"
-	ResourceSettingsCalling      = "settings.calling"
 	ResourceSettingsNotification = "settings.notification"
 	// Chatbot sub-resources — used only as audit_log resource_type values
 	// for per-tab activity feeds, not checked by the permission system.
@@ -80,10 +79,6 @@ const (
 	ResourceCannedResponses         = "canned_responses"
 	ResourceCustomActions           = "custom_actions"
 	ResourceOrganizations           = "organizations"
-	ResourceCallLogs                = "call_logs"
-	ResourceIVRFlows                = "ivr_flows"
-	ResourceCallTransfers           = "call_transfers"
-	ResourceOutgoingCalls           = "outgoing_calls"
 	ResourceAuditLogs               = "audit_logs"
 )
 
@@ -217,22 +212,6 @@ func DefaultPermissions() []Permission {
 		{Resource: ResourceOrganizations, Action: ActionDelete, Description: "Delete organizations"},
 		{Resource: ResourceOrganizations, Action: ActionAssign, Description: "Manage organization members"},
 
-		// Call Logs
-		{Resource: ResourceCallLogs, Action: ActionRead, Description: "View call logs"},
-
-		// IVR Flows
-		{Resource: ResourceIVRFlows, Action: ActionRead, Description: "View IVR flows"},
-		{Resource: ResourceIVRFlows, Action: ActionWrite, Description: "Create and edit IVR flows"},
-		{Resource: ResourceIVRFlows, Action: ActionDelete, Description: "Delete IVR flows"},
-
-		// Call Transfers
-		{Resource: ResourceCallTransfers, Action: ActionRead, Description: "View call transfers"},
-		{Resource: ResourceCallTransfers, Action: ActionWrite, Description: "Accept and manage call transfers"},
-
-		// Outgoing Calls
-		{Resource: ResourceOutgoingCalls, Action: ActionRead, Description: "View outgoing call status"},
-		{Resource: ResourceOutgoingCalls, Action: ActionWrite, Description: "Initiate outgoing calls"},
-
 		// Audit Logs
 		{Resource: ResourceAuditLogs, Action: ActionRead, Description: "View audit logs"},
 	}
@@ -282,11 +261,6 @@ func SystemRolePermissions() map[string][]string {
 		"custom_actions:read", "custom_actions:write", "custom_actions:delete",
 		// Organizations (read only)
 		"organizations:read",
-		// Calling
-		"call_logs:read",
-		"ivr_flows:read", "ivr_flows:write", "ivr_flows:delete",
-		"call_transfers:read", "call_transfers:write",
-		"outgoing_calls:read", "outgoing_calls:write",
 	}
 
 	agentPermissions := []string{
@@ -302,11 +276,6 @@ func SystemRolePermissions() map[string][]string {
 		"transfers:read", "transfers:write", "transfers:pickup",
 		// Canned Responses (read only)
 		"canned_responses:read",
-		// Call Logs: agents see only their own (no call_logs:read permission)
-		// Call Transfers
-		"call_transfers:read", "call_transfers:write",
-		// Outgoing Calls
-		"outgoing_calls:read", "outgoing_calls:write",
 	}
 
 	return map[string][]string{

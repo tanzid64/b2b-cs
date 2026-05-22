@@ -26,7 +26,7 @@ const (
 // MetaAnalyticsRequest represents the request parameters for Meta analytics
 type MetaAnalyticsRequest struct {
 	AccountID     string `json:"account_id"`     // Optional: specific account ID or empty for all
-	AnalyticsType string `json:"analytics_type"` // Required: analytics, pricing_analytics, template_analytics, call_analytics
+	AnalyticsType string `json:"analytics_type"` // Required: analytics, pricing_analytics, template_analytics
 	Start         string `json:"start"`          // Required: YYYY-MM-DD format
 	End           string `json:"end"`            // Required: YYYY-MM-DD format
 	Granularity   string `json:"granularity"`    // Optional: HALF_HOUR, DAY, MONTH (default: DAY)
@@ -64,7 +64,7 @@ func (a *App) GetMetaAnalytics(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "analytics_type is required", nil, "")
 	}
 	if !whatsapp.ValidateAnalyticsType(analyticsType) {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid analytics_type. Must be one of: analytics, pricing_analytics, template_analytics, call_analytics", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid analytics_type. Must be one of: analytics, pricing_analytics, template_analytics", nil, "")
 	}
 	if startStr == "" || endStr == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "start and end dates are required (YYYY-MM-DD format)", nil, "")
@@ -260,10 +260,6 @@ func (a *App) GetMetaAnalytics(r *fastglue.Request) error {
 			case string(whatsapp.AnalyticsTypeTemplate):
 				if data.TemplateAnalytics != nil {
 					dataPointCount = len(data.TemplateAnalytics.DataPoints)
-				}
-			case string(whatsapp.AnalyticsTypeCall):
-				if data.CallAnalytics != nil {
-					dataPointCount = len(data.CallAnalytics.DataPoints)
 				}
 			}
 		}

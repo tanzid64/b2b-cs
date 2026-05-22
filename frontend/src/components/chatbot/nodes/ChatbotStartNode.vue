@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Play } from 'lucide-vue-next'
-import BaseNode from '@/components/calling/nodes/BaseNode.vue'
+import BaseNode from './BaseNode.vue'
 
 defineOptions({ inheritAttrs: false })
 defineProps<{ data: any }>()

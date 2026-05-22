@@ -15,7 +15,6 @@ import {
 import { wsService } from '@/services/websocket'
 import { authService } from '@/services/api'
 import UserMenu from './UserMenu.vue'
-import ActiveCallPanel from '@/components/calling/ActiveCallPanel.vue'
 import { ScrollToTop } from '@/components/shared'
 import { navigationSections, type NavSection } from './navigation'
 
@@ -290,7 +289,6 @@ const handleLogout = async () => {
           <component :is="Component" :key="viewRoute.meta.stableKey ? String(viewRoute.name) : viewRoute.path" />
         </Transition>
       </RouterView>
-      <ActiveCallPanel />
       <ScrollToTop />
     </main>
   </div>

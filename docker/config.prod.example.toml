@@ -74,10 +74,6 @@ trust_proxy = true
 api_max_requests = 200
 api_window_seconds = 60
 
-# Calling/IVR is intentionally omitted: the production image strips Piper/ffmpeg.
-# If you ever re-enable it, switch to Dockerfile (not Dockerfile.prod) and add
-# the [calling] / [tts] sections back.
-
 # Default admin — only used on first boot when the users table is empty.
 # After first login, CHANGE THIS PASSWORD via the UI and consider removing
 # this section.

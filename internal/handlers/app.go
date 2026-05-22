@@ -9,11 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/assignment"
-	"github.com/banglab2bb2c/banglab2bb2c/internal/calling"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/config"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/queue"
-	"github.com/banglab2bb2c/banglab2bb2c/internal/storage"
-	"github.com/banglab2bb2c/banglab2bb2c/internal/tts"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/websocket"
 	"github.com/banglab2bb2c/banglab2bb2c/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
@@ -34,14 +31,8 @@ type App struct {
 	CampaignSubCancel context.CancelFunc
 	// HTTPClient is a shared HTTP client with connection pooling for external API calls
 	HTTPClient *http.Client
-	// Assigner provides shared team-based agent assignment (used by both chat and call transfers)
+	// Assigner provides shared team-based agent assignment.
 	Assigner *assignment.Assigner
-	// CallManager handles WebRTC call sessions (nil when calling is disabled)
-	CallManager *calling.Manager
-	// TTS generates audio from text for IVR greetings (nil when not configured)
-	TTS *tts.PiperTTS
-	// S3Client for serving call recording presigned URLs (nil when not configured)
-	S3Client *storage.S3Client
 	// wg tracks background goroutines for graceful shutdown
 	wg sync.WaitGroup
 }

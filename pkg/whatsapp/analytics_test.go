@@ -35,7 +35,6 @@ func TestValidateAnalyticsType(t *testing.T) {
 		"analytics":          true,
 		"pricing_analytics":  true,
 		"template_analytics": true,
-		"call_analytics":     true,
 		"unknown":            false,
 		"":                   false,
 	}
@@ -58,11 +57,9 @@ func TestNormalizeGranularity(t *testing.T) {
 		{"MONTH", whatsapp.AnalyticsTypeTemplate, "DAILY"},
 		{"HALF_HOUR", whatsapp.AnalyticsTypeTemplate, "DAILY"},
 
-		// Pricing/Call: DAY → DAILY, MONTH → MONTHLY.
+		// Pricing: DAY → DAILY, MONTH → MONTHLY.
 		{"DAY", whatsapp.AnalyticsTypePricing, "DAILY"},
 		{"MONTH", whatsapp.AnalyticsTypePricing, "MONTHLY"},
-		{"DAY", whatsapp.AnalyticsTypeCall, "DAILY"},
-		{"MONTH", whatsapp.AnalyticsTypeCall, "MONTHLY"},
 
 		// Pricing also accepts already-normalized DAILY/MONTHLY.
 		{"DAILY", whatsapp.AnalyticsTypePricing, "DAILY"},
@@ -78,7 +75,6 @@ func TestNormalizeGranularity(t *testing.T) {
 
 		// HALF_HOUR is preserved everywhere except template.
 		{"HALF_HOUR", whatsapp.AnalyticsTypeMessaging, "HALF_HOUR"},
-		{"HALF_HOUR", whatsapp.AnalyticsTypeCall, "HALF_HOUR"},
 	}
 	for _, c := range cases {
 		assert.Equal(t, c.want, whatsapp.NormalizeGranularity(c.in, c.typ),
@@ -171,31 +167,6 @@ func TestClient_GetAnalytics_PricingIncludesDimensions(t *testing.T) {
 	require.NotNil(t, resp.PricingAnalytics)
 	require.Len(t, resp.PricingAnalytics.DataPoints, 1)
 	assert.Equal(t, "IN", resp.PricingAnalytics.DataPoints[0].Country)
-}
-
-// --- GetAnalytics: Call dimensions + metric_types ---
-
-func TestClient_GetAnalytics_CallIncludesDimensionsAndMetricTypes(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Contains(t, r.URL.RawQuery, "dimensions(direction)")
-		assert.Contains(t, r.URL.RawQuery, "metric_types(COUNT,COST,AVERAGE_DURATION)")
-		_, _ = w.Write([]byte(`{
-			"id":"WABA-1",
-			"call_analytics":{"granularity":"DAILY","data_points":[{"start":1,"end":2,"count":3,"cost":0.5,"average_duration":120,"direction":"USER_INITIATED"}]}
-		}`))
-	}))
-	t.Cleanup(srv.Close)
-	client := whatsapp.NewWithBaseURL(testutil.NopLogger(), srv.URL)
-
-	resp, err := client.GetAnalytics(context.Background(), &whatsapp.Account{
-		BusinessID: "WABA-1", APIVersion: "v18.0", AccessToken: "tok",
-	}, whatsapp.AnalyticsTypeCall, &whatsapp.AnalyticsRequest{
-		Start: 1, End: 2, Granularity: "DAY",
-	})
-	require.NoError(t, err)
-	require.NotNil(t, resp.CallAnalytics)
-	require.Len(t, resp.CallAnalytics.DataPoints, 1)
-	assert.Equal(t, "USER_INITIATED", resp.CallAnalytics.DataPoints[0].Direction)
 }
 
 // --- GetAnalytics: Template analytics uses dedicated endpoint + paginates ---

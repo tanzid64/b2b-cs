@@ -28,10 +28,9 @@ type AccountRequest struct {
 	AppSecret          string `json:"app_secret"` // Meta App Secret for webhook signature verification
 	WebhookVerifyToken string `json:"webhook_verify_token"`
 	APIVersion         string `json:"api_version"`
-	IsDefaultIncoming      bool   `json:"is_default_incoming"`
-	IsDefaultOutgoing      bool   `json:"is_default_outgoing"`
-	AutoReadReceipt        bool   `json:"auto_read_receipt"`
-	BusinessCallingEnabled bool   `json:"business_calling_enabled"`
+	IsDefaultIncoming bool `json:"is_default_incoming"`
+	IsDefaultOutgoing bool `json:"is_default_outgoing"`
+	AutoReadReceipt   bool `json:"auto_read_receipt"`
 }
 
 // AccountResponse represents the response for an account (without sensitive data)
@@ -43,11 +42,10 @@ type AccountResponse struct {
 	BusinessID         string     `json:"business_id"`
 	WebhookVerifyToken string     `json:"webhook_verify_token"`
 	APIVersion         string     `json:"api_version"`
-	IsDefaultIncoming      bool       `json:"is_default_incoming"`
-	IsDefaultOutgoing      bool       `json:"is_default_outgoing"`
-	AutoReadReceipt        bool       `json:"auto_read_receipt"`
-	BusinessCallingEnabled bool       `json:"business_calling_enabled"`
-	Status                 string     `json:"status"`
+	IsDefaultIncoming bool       `json:"is_default_incoming"`
+	IsDefaultOutgoing bool       `json:"is_default_outgoing"`
+	AutoReadReceipt   bool       `json:"auto_read_receipt"`
+	Status            string     `json:"status"`
 	HasAccessToken     bool       `json:"has_access_token"`
 	HasAppSecret       bool       `json:"has_app_secret"`
 	PhoneNumber        string     `json:"phone_number,omitempty"`
@@ -135,11 +133,10 @@ func (a *App) CreateAccount(r *fastglue.Request) error {
 		AppSecret:          encAppSecret,
 		WebhookVerifyToken: webhookVerifyToken,
 		APIVersion:         apiVersion,
-		IsDefaultIncoming:      req.IsDefaultIncoming,
-		IsDefaultOutgoing:      req.IsDefaultOutgoing,
-		AutoReadReceipt:        req.AutoReadReceipt,
-		BusinessCallingEnabled: req.BusinessCallingEnabled,
-		Status:                 "active",
+		IsDefaultIncoming: req.IsDefaultIncoming,
+		IsDefaultOutgoing: req.IsDefaultOutgoing,
+		AutoReadReceipt:   req.AutoReadReceipt,
+		Status:            "active",
 		CreatedByID:        &userID,
 		UpdatedByID:        &userID,
 	}
@@ -253,7 +250,6 @@ func (a *App) UpdateAccount(r *fastglue.Request) error {
 		account.APIVersion = req.APIVersion
 	}
 	account.AutoReadReceipt = req.AutoReadReceipt
-	account.BusinessCallingEnabled = req.BusinessCallingEnabled
 
 	// Handle default flags
 	if req.IsDefaultIncoming && !account.IsDefaultIncoming {
@@ -429,11 +425,10 @@ func accountToResponse(acc models.WhatsAppAccount) AccountResponse {
 		BusinessID:         acc.BusinessID,
 		WebhookVerifyToken: acc.WebhookVerifyToken,
 		APIVersion:         acc.APIVersion,
-		IsDefaultIncoming:      acc.IsDefaultIncoming,
-		IsDefaultOutgoing:      acc.IsDefaultOutgoing,
-		AutoReadReceipt:        acc.AutoReadReceipt,
-		BusinessCallingEnabled: acc.BusinessCallingEnabled,
-		Status:                 acc.Status,
+		IsDefaultIncoming: acc.IsDefaultIncoming,
+		IsDefaultOutgoing: acc.IsDefaultOutgoing,
+		AutoReadReceipt:   acc.AutoReadReceipt,
+		Status:            acc.Status,
 		HasAccessToken:     acc.AccessToken != "",
 		HasAppSecret:       acc.AppSecret != "",
 		CreatedByID:        acc.CreatedByID,

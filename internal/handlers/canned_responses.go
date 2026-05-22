@@ -2,9 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/audit"
@@ -15,17 +12,13 @@ import (
 )
 
 // CannedResponseButton mirrors the chatbot flow ButtonConfig shape.
-// type is one of "reply", "url", "phone", "voice_call". For voice_call,
-// Title is the on-button label (Meta's display_text, 20-char cap applied at
-// send time) and TTLMinutes is how long the button stays clickable (0 ⇒
-// Meta default, 15 min).
+// type is one of "reply", "url", "phone".
 type CannedResponseButton struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Type        string `json:"type,omitempty"`
 	URL         string `json:"url,omitempty"`
 	PhoneNumber string `json:"phone_number,omitempty"`
-	TTLMinutes  int    `json:"ttl_minutes,omitempty"`
 }
 
 // CannedResponseRequest represents the request body for creating/updating a canned response
@@ -386,12 +379,6 @@ func buttonsToAuditString(arr models.JSONBArray) string {
 			parts = append(parts, b.Title+" ("+b.URL+") [url]")
 		case "phone":
 			parts = append(parts, b.Title+" ("+b.PhoneNumber+") [phone]")
-		case "voice_call":
-			label := b.Title + " [voice_call"
-			if b.TTLMinutes > 0 {
-				label += ", " + strconv.Itoa(b.TTLMinutes) + "m"
-			}
-			parts = append(parts, label+"]")
 		default:
 			parts = append(parts, b.Title+" [reply]")
 		}
@@ -406,45 +393,10 @@ func buttonsToAuditString(arr models.JSONBArray) string {
 	return out
 }
 
-// validateCannedResponseButtons enforces the combo rules WhatsApp Cloud API
-// imposes on free-form interactive messages. We block at save time so the
-// agent gets a clear error instead of a silent fallback to plain text at
-// send time. Frontend mirrors these checks in
-// CannedResponseDetailView.vue:buttonsValidationError; keep them in sync.
-//
-//   - voice_call is interactive.type:"voice_call" — Meta does not allow it to
-//     coexist with reply / url / phone buttons in a single send, and only
-//     one voice_call button per message.
-//   - voice_call needs a non-empty title (becomes Meta's display_text) and a
-//     ttl_minutes in [0, 60]; 0 means "use Meta's default" (15 min).
-//
-// Other combo rules (no phone, max 1 url, no reply+url mix, max 10 reply)
-// are enforced on the frontend today and left there for now since the
-// existing send path falls back gracefully to text.
+// validateCannedResponseButtons is currently a no-op placeholder. Combo rules
+// for free-form interactive buttons (max counts, type mixing) are enforced on
+// the frontend; the existing send path falls back gracefully to text.
 func validateCannedResponseButtons(buttons []CannedResponseButton) error {
-	if len(buttons) == 0 {
-		return nil
-	}
-	voiceCalls := 0
-	others := 0
-	for _, b := range buttons {
-		if strings.ToLower(b.Type) == "voice_call" {
-			voiceCalls++
-			if strings.TrimSpace(b.Title) == "" {
-				return fmt.Errorf("voice_call button needs a title")
-			}
-			if b.TTLMinutes < 0 || b.TTLMinutes > 60 {
-				return fmt.Errorf("voice_call ttl_minutes must be between 0 and 60")
-			}
-			continue
-		}
-		others++
-	}
-	if voiceCalls > 1 {
-		return fmt.Errorf("only one voice_call button is allowed per message")
-	}
-	if voiceCalls > 0 && others > 0 {
-		return fmt.Errorf("voice_call cannot be combined with other button types")
-	}
+	_ = buttons
 	return nil
 }

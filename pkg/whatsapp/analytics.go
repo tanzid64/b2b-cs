@@ -25,7 +25,6 @@ const (
 	AnalyticsTypeMessaging AnalyticsType = "analytics"
 	AnalyticsTypePricing   AnalyticsType = "pricing_analytics"
 	AnalyticsTypeTemplate  AnalyticsType = "template_analytics"
-	AnalyticsTypeCall      AnalyticsType = "call_analytics"
 )
 
 // MessagingAnalyticsDataPoint represents a single data point for messaging analytics
@@ -134,43 +133,12 @@ type TemplateAnalytics struct {
 	DataPoints  []TemplateAnalyticsDataPoint `json:"data_points"`
 }
 
-// CallAnalyticsDataPoint represents a single data point for call analytics
-type CallAnalyticsDataPoint struct {
-	Start           int64   `json:"start"`
-	End             int64   `json:"end"`
-	Count           int64   `json:"count"`
-	Cost            float64 `json:"cost"`
-	AverageDuration int64   `json:"average_duration"`    // Average duration in seconds
-	Direction       string  `json:"direction,omitempty"` // USER_INITIATED or BUSINESS_INITIATED (from dimensions)
-}
-
-// CallAnalyticsEntry represents a single phone number's call data
-type CallAnalyticsEntry struct {
-	PhoneNumber string                   `json:"phone_number,omitempty"`
-	DataPoints  []CallAnalyticsDataPoint `json:"data_points"`
-}
-
-// CallAnalyticsRaw represents the raw response from Meta API
-type CallAnalyticsRaw struct {
-	Granularity string               `json:"granularity"`
-	Data        []CallAnalyticsEntry `json:"data"`
-	// Also support direct data_points for backward compatibility
-	DataPoints []CallAnalyticsDataPoint `json:"data_points,omitempty"`
-}
-
-// CallAnalytics represents call analytics response (flattened)
-type CallAnalytics struct {
-	Granularity string                   `json:"granularity"`
-	DataPoints  []CallAnalyticsDataPoint `json:"data_points"`
-}
-
 // MetaAnalyticsResponse is a generic response that holds any analytics type
 type MetaAnalyticsResponse struct {
 	ID                string              `json:"id"`
 	Analytics         *MessagingAnalytics `json:"analytics,omitempty"`
 	PricingAnalytics  *PricingAnalytics   `json:"pricing_analytics,omitempty"`
 	TemplateAnalytics *TemplateAnalytics  `json:"template_analytics,omitempty"`
-	CallAnalytics     *CallAnalytics      `json:"call_analytics,omitempty"`
 }
 
 // metaAnalyticsRawResponse represents the raw response from Meta API
@@ -179,7 +147,6 @@ type metaAnalyticsRawResponse struct {
 	Analytics         json.RawMessage `json:"analytics,omitempty"`
 	PricingAnalytics  json.RawMessage `json:"pricing_analytics,omitempty"`
 	TemplateAnalytics json.RawMessage `json:"template_analytics,omitempty"`
-	CallAnalytics     json.RawMessage `json:"call_analytics,omitempty"`
 }
 
 // metaPagingCursors represents the cursors in Meta API pagination
@@ -270,26 +237,6 @@ func (c *Client) GetAnalytics(ctx context.Context, account *Account, analyticsTy
 			}
 			response.PricingAnalytics = &analytics
 		}
-	case AnalyticsTypeCall:
-		if len(rawResp.CallAnalytics) > 0 {
-			var rawAnalytics CallAnalyticsRaw
-			if err := json.Unmarshal(rawResp.CallAnalytics, &rawAnalytics); err != nil {
-				return nil, fmt.Errorf("failed to parse call analytics: %w", err)
-			}
-			// Flatten if nested, otherwise use direct data_points
-			analytics := CallAnalytics{
-				Granularity: rawAnalytics.Granularity,
-				DataPoints:  make([]CallAnalyticsDataPoint, 0),
-			}
-			if len(rawAnalytics.Data) > 0 {
-				for _, entry := range rawAnalytics.Data {
-					analytics.DataPoints = append(analytics.DataPoints, entry.DataPoints...)
-				}
-			} else if len(rawAnalytics.DataPoints) > 0 {
-				analytics.DataPoints = rawAnalytics.DataPoints
-			}
-			response.CallAnalytics = &analytics
-		}
 	}
 
 	return response, nil
@@ -330,12 +277,6 @@ func (c *Client) buildAnalyticsURL(account *Account, analyticsType AnalyticsType
 	// Add dimensions for pricing_analytics to get detailed breakdown
 	if analyticsType == AnalyticsTypePricing {
 		filters = append(filters, "dimensions(PRICING_CATEGORY,PRICING_TYPE,COUNTRY)")
-	}
-
-	// Add dimensions for call_analytics to get direction breakdown
-	if analyticsType == AnalyticsTypeCall {
-		filters = append(filters, "dimensions(direction)")
-		filters = append(filters, "metric_types(COUNT,COST,AVERAGE_DURATION)")
 	}
 
 	field := fmt.Sprintf("%s.%s", analyticsType, strings.Join(filters, "."))
@@ -400,7 +341,7 @@ func NormalizeGranularity(granularity string, analyticsType AnalyticsType) strin
 	// Some endpoints use DAILY/MONTHLY format
 	useDailyFormat := false
 	switch analyticsType {
-	case AnalyticsTypePricing, AnalyticsTypeCall:
+	case AnalyticsTypePricing:
 		useDailyFormat = true
 	}
 
@@ -419,7 +360,7 @@ func NormalizeGranularity(granularity string, analyticsType AnalyticsType) strin
 // ValidateAnalyticsType validates the analytics type value
 func ValidateAnalyticsType(analyticsType string) bool {
 	switch AnalyticsType(analyticsType) {
-	case AnalyticsTypeMessaging, AnalyticsTypePricing, AnalyticsTypeTemplate, AnalyticsTypeCall:
+	case AnalyticsTypeMessaging, AnalyticsTypePricing, AnalyticsTypeTemplate:
 		return true
 	default:
 		return false

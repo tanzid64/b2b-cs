@@ -8,8 +8,6 @@ import (
 )
 
 // ChatNodeType identifies the kind of node in a chatbot flow graph.
-// Constants live in this package so the chat domain owns its vocabulary
-// without coupling to internal/calling.
 type ChatNodeType string
 
 const (

@@ -444,7 +444,6 @@ export type MetaAnalyticsType =
   | 'conversation_analytics'
   | 'pricing_analytics'
   | 'template_analytics'
-  | 'call_analytics'
 
 export type MetaGranularity = 'HALF_HOUR' | 'DAY' | 'MONTH'
 
@@ -505,15 +504,6 @@ export interface MetaTemplateDataPoint {
   cost?: MetaTemplateCostItem[]
 }
 
-export interface MetaCallDataPoint {
-  start: number
-  end: number
-  count: number
-  cost: number
-  average_duration: number
-  direction?: string // USER_INITIATED or BUSINESS_INITIATED
-}
-
 interface MetaAnalyticsData {
   id: string
   analytics?: {
@@ -531,10 +521,6 @@ interface MetaAnalyticsData {
   template_analytics?: {
     granularity: string
     data_points: MetaTemplateDataPoint[]
-  }
-  call_analytics?: {
-    granularity: string
-    data_points: MetaCallDataPoint[]
   }
 }
 
@@ -678,19 +664,7 @@ export const organizationService = {
     timezone?: string
     date_format?: string
     name?: string
-    calling_enabled?: boolean
-    max_call_duration?: number
-    transfer_timeout_secs?: number
-    hold_music_file?: string
-    ringback_file?: string
-  }) => api.put('/org/settings', data),
-  uploadOrgAudio: (file: File, type: 'hold_music' | 'ringback') => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return api.post(`/org/audio?type=${type}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-  }
+  }) => api.put('/org/settings', data)
 }
 
 // Organizations
@@ -978,74 +952,7 @@ export const notesService = {
     api.delete(`/contacts/${contactId}/notes/${noteId}`)
 }
 
-// Calling - Call Logs & IVR Flows
-export interface CallLog {
-  id: string
-  organization_id: string
-  whatsapp_account: string
-  contact_id: string
-  whatsapp_call_id: string
-  caller_phone: string
-  direction: 'incoming' | 'outgoing'
-  status: 'ringing' | 'answered' | 'completed' | 'missed' | 'rejected' | 'failed' | 'initiating' | 'accepted' | 'transferring'
-  duration: number
-  ivr_flow_id?: string
-  ivr_path?: Record<string, any>
-  agent_id?: string
-  started_at?: string
-  answered_at?: string
-  ended_at?: string
-  disconnected_by?: 'client' | 'agent' | 'system'
-  error_message?: string
-  recording_s3_key?: string
-  recording_duration?: number
-  contact?: {
-    id: string
-    phone_number: string
-    profile_name: string
-  }
-  agent?: {
-    id: string
-    full_name: string
-    email: string
-  }
-  ivr_flow?: IVRFlow
-  created_at: string
-  updated_at: string
-}
-
-// v2 Node-based IVR Flow types
-export type IVRNodeType = 'greeting' | 'menu' | 'gather' | 'http_callback' | 'transfer' | 'goto_flow' | 'timing' | 'hangup'
-
-export interface IVRNodePosition {
-  x: number
-  y: number
-}
-
-export interface IVRNode {
-  id: string
-  type: IVRNodeType
-  label: string
-  position: IVRNodePosition
-  config: Record<string, any>
-}
-
-export interface IVREdge {
-  from: string
-  to: string
-  condition: string
-}
-
-export interface IVRFlowData {
-  version: 2
-  nodes: IVRNode[]
-  edges: IVREdge[]
-  entry_node: string
-}
-
-// v2 Node-based Chatbot Flow types. Mirrors IVR's graph shape with a
-// chat-specific node-type union. Only types listed in the union are
-// implemented today; others land in Phase 3.
+// v2 Node-based Chatbot Flow types.
 export type ChatNodeType =
   | 'start'
   | 'message'
@@ -1062,11 +969,16 @@ export type ChatNodeType =
   | 'goto_flow'
   | 'whatsapp_flow'
 
+export interface NodePosition {
+  x: number
+  y: number
+}
+
 export interface ChatNode {
   id: string
   type: ChatNodeType
   label: string
-  position: IVRNodePosition
+  position: NodePosition
   config: Record<string, any>
 }
 
@@ -1081,131 +993,6 @@ export interface ChatFlowGraph {
   nodes: ChatNode[]
   edges: ChatEdge[]
   entry_node: string
-}
-
-export interface IVRFlow {
-  id: string
-  organization_id: string
-  whatsapp_account: string
-  name: string
-  description: string
-  is_active: boolean
-  is_call_start: boolean
-  is_outgoing_end: boolean
-  menu: IVRFlowData
-  welcome_audio_url: string
-  created_at: string
-  updated_at: string
-}
-
-export interface CallTransfer {
-  id: string
-  organization_id: string
-  call_log_id: string
-  whatsapp_call_id: string
-  caller_phone: string
-  contact_id: string
-  whatsapp_account: string
-  status: 'waiting' | 'connected' | 'completed' | 'abandoned' | 'no_answer'
-  team_id?: string
-  agent_id?: string
-  initiating_agent_id?: string
-  transferred_at: string
-  connected_at?: string
-  completed_at?: string
-  hold_duration: number
-  talk_duration: number
-  ivr_path?: Record<string, any>
-  contact?: {
-    id: string
-    phone_number: string
-    profile_name: string
-  }
-  agent?: {
-    id: string
-    full_name: string
-    email: string
-  }
-  initiating_agent?: {
-    id: string
-    full_name: string
-    email: string
-  }
-  team?: {
-    id: string
-    name: string
-  }
-  call_log?: CallLog
-  created_at: string
-  updated_at: string
-}
-
-// Outgoing Calls
-export interface CallPermission {
-  id: string
-  contact_id: string
-  whatsapp_account: string
-  status: 'pending' | 'accepted' | 'declined' | 'expired'
-  message_id?: string
-  requested_at: string
-  responded_at?: string
-  expires_at?: string
-}
-
-export const outgoingCallsService = {
-  initiate: (data: { contact_id: string; whatsapp_account: string; sdp_offer: string }) =>
-    api.post<{ call_log_id: string; sdp_answer: string }>('/calls/outgoing', data),
-  hangup: (callLogId: string) =>
-    api.post(`/calls/outgoing/${callLogId}/hangup`),
-  requestPermission: (data: { contact_id: string; whatsapp_account: string }) =>
-    api.post<{ permission_id: string }>('/calls/permission-request', data),
-  getPermission: (contactId: string, whatsappAccount: string) =>
-    api.get<CallPermission>(`/calls/permission/${contactId}`, { params: { whatsapp_account: whatsappAccount } }),
-  getICEServers: () =>
-    api.get<{ ice_servers: Array<{ urls: string[]; username?: string; credential?: string }> }>('/calls/ice-servers'),
-}
-
-export const callLogsService = {
-  list: (params?: { status?: string; account?: string; contact_id?: string; direction?: string; ivr_flow_id?: string; phone?: string; from?: string; to?: string; page?: number; limit?: number }) =>
-    api.get<{ call_logs: CallLog[]; total: number }>('/call-logs', { params }),
-  get: (id: string) => api.get<CallLog>(`/call-logs/${id}`),
-  getRecordingURL: (id: string) =>
-    api.get<{ url: string; duration: number }>(`/call-logs/${id}/recording`),
-  hold: (id: string) =>
-    api.post<{ status: string }>(`/call-logs/${id}/hold`),
-  resume: (id: string) =>
-    api.post<{ status: string }>(`/call-logs/${id}/resume`),
-}
-
-export const callTransfersService = {
-  list: (params?: { status?: string; page?: number; limit?: number }) =>
-    api.get<{ call_transfers: CallTransfer[]; total: number }>('/call-transfers', { params }),
-  get: (id: string) => api.get<CallTransfer>(`/call-transfers/${id}`),
-  connect: (id: string, sdpOffer: string) =>
-    api.post<{ sdp_answer: string }>(`/call-transfers/${id}/connect`, { sdp_offer: sdpOffer }),
-  hangup: (id: string) =>
-    api.post(`/call-transfers/${id}/hangup`),
-  initiate: (data: { call_log_id: string; team_id: string; agent_id?: string }) =>
-    api.post<{ status: string }>('/call-transfers/initiate', data),
-}
-
-export const ivrFlowsService = {
-  list: (params?: { search?: string; page?: number; limit?: number }) =>
-    api.get<{ ivr_flows: IVRFlow[]; total: number }>('/ivr-flows', { params }),
-  get: (id: string) => api.get<IVRFlow>(`/ivr-flows/${id}`),
-  create: (data: { whatsapp_account: string; name: string; description?: string; is_call_start?: boolean; menu: IVRFlowData; welcome_audio_url?: string }) =>
-    api.post<IVRFlow>('/ivr-flows', data),
-  update: (id: string, data: { name?: string; description?: string; is_active?: boolean; is_call_start?: boolean; is_outgoing_end?: boolean; menu?: IVRFlowData; welcome_audio_url?: string }) =>
-    api.put<IVRFlow>(`/ivr-flows/${id}`, data),
-  delete: (id: string) => api.delete(`/ivr-flows/${id}`),
-  uploadAudio: (file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return api.post('/ivr-flows/audio', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-  },
-  getAudioUrl: (filename: string) => `${api.defaults.baseURL}/ivr-flows/audio/${encodeURIComponent(filename)}`
 }
 
 export default api

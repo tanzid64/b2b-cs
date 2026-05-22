@@ -26,8 +26,7 @@ import {
   type MetaAnalyticsResponse,
   type MetaMessagingDataPoint,
   type MetaPricingDataPoint,
-  type MetaTemplateDataPoint,
-  type MetaCallDataPoint
+  type MetaTemplateDataPoint
 } from '@/services/api'
 import { PageHeader, ErrorState, DateRangePicker } from '@/components/shared'
 import {
@@ -46,9 +45,6 @@ import {
   MessagesSquare,
   DollarSign,
   FileText,
-  Phone,
-  PhoneIncoming,
-  PhoneOutgoing,
   RefreshCw,
   TrendingUp,
   Send,
@@ -253,17 +249,6 @@ const aggregatedData = computed(() => {
     return aggregateTemplateData(allPoints)
   }
 
-  // For call analytics
-  if (activeTab.value === 'call_analytics') {
-    const allPoints: MetaCallDataPoint[] = []
-    for (const account of analyticsData.value) {
-      if (account.data?.call_analytics?.data_points) {
-        allPoints.push(...account.data.call_analytics.data_points)
-      }
-    }
-    return aggregateCallData(allPoints)
-  }
-
   return null
 })
 
@@ -459,49 +444,6 @@ const filteredTemplateData = computed(() => {
   return entries
 })
 
-function aggregateCallData(points: MetaCallDataPoint[]) {
-  const byTime = new Map<number, { incoming: number; outgoing: number; cost: number; totalDuration: number }>()
-  let totalCalls = 0
-  let totalIncoming = 0
-  let totalOutgoing = 0
-  let totalCost = 0
-  let totalDuration = 0
-
-  for (const point of points) {
-    totalCalls += point.count
-    totalCost += point.cost
-    totalDuration += point.average_duration * point.count
-
-    if (point.direction === 'USER_INITIATED') {
-      totalIncoming += point.count
-    } else if (point.direction === 'BUSINESS_INITIATED') {
-      totalOutgoing += point.count
-    }
-
-    const existing = byTime.get(point.start) || { incoming: 0, outgoing: 0, cost: 0, totalDuration: 0 }
-    const isIncoming = point.direction === 'USER_INITIATED'
-    byTime.set(point.start, {
-      incoming: existing.incoming + (isIncoming ? point.count : 0),
-      outgoing: existing.outgoing + (!isIncoming ? point.count : 0),
-      cost: existing.cost + point.cost,
-      totalDuration: existing.totalDuration + point.average_duration * point.count
-    })
-  }
-
-  const avgDuration = totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0
-  const sortedTimes = Array.from(byTime.entries()).sort((a, b) => a[0] - b[0])
-
-  return {
-    totals: { calls: totalCalls, incoming: totalIncoming, outgoing: totalOutgoing, cost: totalCost, avgDuration },
-    timeSeries: sortedTimes.map(([time, data]) => ({
-      time,
-      incoming: data.incoming,
-      outgoing: data.outgoing,
-      cost: data.cost
-    }))
-  }
-}
-
 // Chart data
 const messagingChartData = computed(() => {
   if (!aggregatedData.value || activeTab.value !== 'analytics') {
@@ -558,36 +500,6 @@ const pricingChartData = computed(() => {
   }
 })
 
-const callChartData = computed(() => {
-  if (!aggregatedData.value || activeTab.value !== 'call_analytics') {
-    return { labels: [], datasets: [] }
-  }
-
-  const data = aggregatedData.value as ReturnType<typeof aggregateCallData>
-
-  return {
-    labels: data.timeSeries.map(ts => formatTimestamp(ts.time)),
-    datasets: [
-      {
-        label: t('metaInsights.incoming'),
-        data: data.timeSeries.map(d => d.incoming),
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        fill: true,
-        tension: 0.3
-      },
-      {
-        label: t('metaInsights.outgoing'),
-        data: data.timeSeries.map(d => d.outgoing),
-        borderColor: 'rgb(168, 85, 247)',
-        backgroundColor: 'rgba(168, 85, 247, 0.1)',
-        fill: true,
-        tension: 0.3
-      }
-    ]
-  }
-})
-
 // Helper functions
 function formatTimestamp(ts: number): string {
   const date = new Date(ts * 1000)
@@ -605,16 +517,6 @@ function formatCategory(category: string): string {
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  if (mins < 60) return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
-  const hours = Math.floor(mins / 60)
-  const remainingMins = mins % 60
-  return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`
 }
 
 const chartOptions = {
@@ -741,10 +643,6 @@ const chartOptions = {
             <TabsTrigger value="template_analytics">
               <FileText class="h-4 w-4 lg:mr-2" />
               <span class="hidden lg:inline">{{ $t('metaInsights.templates') }}</span>
-            </TabsTrigger>
-            <TabsTrigger value="call_analytics">
-              <Phone class="h-4 w-4 lg:mr-2" />
-              <span class="hidden lg:inline">{{ $t('metaInsights.calls') }}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1139,112 +1037,6 @@ const chartOptions = {
             <template v-else>
               <div class="text-center py-12 text-muted-foreground">
                 {{ $t('metaInsights.noTemplateAnalytics') }}
-              </div>
-            </template>
-          </TabsContent>
-
-          <!-- Call Analytics -->
-          <TabsContent value="call_analytics" class="space-y-6">
-            <template v-if="isLoading">
-              <div class="grid gap-4 md:grid-cols-2">
-                <div v-for="i in 2" :key="i" class="rounded-xl border border-white/[0.08] bg-white/[0.02] p-6 light:bg-white light:border-gray-200">
-                  <Skeleton class="h-4 w-24 mb-2 bg-white/[0.08] light:bg-gray-200" />
-                  <Skeleton class="h-8 w-16 bg-white/[0.08] light:bg-gray-200" />
-                </div>
-              </div>
-            </template>
-            <template v-else-if="aggregatedData && activeTab === 'call_analytics'">
-              <!-- Stats Cards -->
-              <div class="grid gap-4 md:grid-cols-5">
-                <div class="card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 light:bg-white light:border-gray-200">
-                  <div class="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <span class="text-sm font-medium text-white/50 light:text-gray-500">{{ $t('metaInsights.totalCalls') }}</span>
-                    <div class="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                      <Phone class="h-5 w-5 text-blue-400" />
-                    </div>
-                  </div>
-                  <div class="pt-2">
-                    <div class="text-3xl font-bold text-white light:text-gray-900">
-                      {{ (aggregatedData as ReturnType<typeof aggregateCallData>).totals.calls.toLocaleString() }}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 light:bg-white light:border-gray-200">
-                  <div class="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <span class="text-sm font-medium text-white/50 light:text-gray-500">{{ $t('metaInsights.incoming') }}</span>
-                    <div class="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                      <PhoneIncoming class="h-5 w-5 text-blue-400" />
-                    </div>
-                  </div>
-                  <div class="pt-2">
-                    <div class="text-3xl font-bold text-white light:text-gray-900">
-                      {{ (aggregatedData as ReturnType<typeof aggregateCallData>).totals.incoming.toLocaleString() }}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 light:bg-white light:border-gray-200">
-                  <div class="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <span class="text-sm font-medium text-white/50 light:text-gray-500">{{ $t('metaInsights.outgoing') }}</span>
-                    <div class="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                      <PhoneOutgoing class="h-5 w-5 text-purple-400" />
-                    </div>
-                  </div>
-                  <div class="pt-2">
-                    <div class="text-3xl font-bold text-white light:text-gray-900">
-                      {{ (aggregatedData as ReturnType<typeof aggregateCallData>).totals.outgoing.toLocaleString() }}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 light:bg-white light:border-gray-200">
-                  <div class="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <span class="text-sm font-medium text-white/50 light:text-gray-500">{{ $t('metaInsights.avgDuration') }}</span>
-                    <div class="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                      <TrendingUp class="h-5 w-5 text-emerald-400" />
-                    </div>
-                  </div>
-                  <div class="pt-2">
-                    <div class="text-3xl font-bold text-white light:text-gray-900">
-                      {{ formatDuration((aggregatedData as ReturnType<typeof aggregateCallData>).totals.avgDuration) }}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="card-depth rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 light:bg-white light:border-gray-200">
-                  <div class="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <span class="text-sm font-medium text-white/50 light:text-gray-500">{{ $t('metaInsights.totalCost') }}</span>
-                    <div class="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                      <DollarSign class="h-5 w-5 text-amber-400" />
-                    </div>
-                  </div>
-                  <div class="pt-2">
-                    <div class="text-3xl font-bold text-white light:text-gray-900">
-                      ${{ (aggregatedData as ReturnType<typeof aggregateCallData>).totals.cost.toFixed(2) }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Chart -->
-              <Card>
-                <CardHeader>
-                  <CardTitle>{{ $t('metaInsights.callsOverTime') }}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div class="h-80">
-                    <Line v-if="callChartData.labels.length > 0" :data="callChartData" :options="chartOptions" />
-                    <div v-else class="h-full flex items-center justify-center text-muted-foreground">
-                      {{ $t('metaInsights.noDataForPeriod') }}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </template>
-            <template v-else>
-              <div class="text-center py-12 text-muted-foreground">
-                {{ $t('metaInsights.noCallAnalytics') }}
               </div>
             </template>
           </TabsContent>
