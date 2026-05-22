@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/audit"
+	"github.com/banglab2bb2c/banglab2bb2c/internal/media"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/models"
 	"github.com/banglab2bb2c/banglab2bb2c/internal/utils"
 	"github.com/banglab2bb2c/banglab2bb2c/pkg/whatsapp"
@@ -807,6 +808,26 @@ func (a *App) SendMediaMessage(r *fastglue.Request) error {
 		mimeType = "application/octet-stream"
 	}
 
+	// Meta's media upload only accepts a fixed set of containers — Chrome's
+	// MediaRecorder defaults to audio/webm which Meta rejects. Rewrap to
+	// audio/ogg (same Opus codec) before forwarding upstream.
+	filename := fileHeader.Filename
+	if newData, newMime, newExt := media.NormalizeForWhatsApp(r.RequestCtx, fileData, mimeType); newMime != mimeType {
+		a.Log.Info("Transcoded media for WhatsApp upload",
+			"from", mimeType, "to", newMime,
+			"original_size", len(fileData), "new_size", len(newData),
+		)
+		fileData = newData
+		mimeType = newMime
+		// Replace the extension on the stored filename so downstream logs
+		// and disk paths reflect the actual container.
+		if dot := strings.LastIndex(filename, "."); dot >= 0 {
+			filename = filename[:dot] + newExt
+		} else {
+			filename = filename + newExt
+		}
+	}
+
 	// Get contact (users without full read permission can only message their assigned contacts)
 	var contact models.Contact
 	query := a.DB.Where("id = ? AND organization_id = ?", contactID, orgID)
@@ -828,7 +849,7 @@ func (a *App) SendMediaMessage(r *fastglue.Request) error {
 	}
 
 	// Save file locally first
-	localPath, err := a.saveMediaLocally(fileData, mimeType, fileHeader.Filename)
+	localPath, err := a.saveMediaLocally(fileData, mimeType, filename)
 	if err != nil {
 		a.Log.Error("Failed to save media locally", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Failed to save media", nil, "")
@@ -842,7 +863,7 @@ func (a *App) SendMediaMessage(r *fastglue.Request) error {
 		MediaData:     fileData,
 		MediaURL:      localPath,
 		MediaMimeType: mimeType,
-		MediaFilename: fileHeader.Filename,
+		MediaFilename: filename,
 		Caption:       caption,
 	}
 
