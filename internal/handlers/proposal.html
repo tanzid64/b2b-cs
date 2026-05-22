@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>BANGLAB2BB2C — Customer Engagement Platform · Project Proposal</title>
-<meta name="description" content="A turn-key WhatsApp customer engagement platform proposal prepared for Bangla B2BB2C." />
+<title>WhatsApp Support System for the BANGLAB2BB2C Marketplace · Internal Proposal</title>
+<meta name="description" content="Internal proposal: adopt our in-house WhatsApp support system as the customer-support backbone for the BANGLAB2BB2C multivendor marketplace." />
 <style>
   :root {
     --bg: #0a0e1a;
@@ -59,6 +59,7 @@
     box-shadow: 0 6px 24px -6px rgba(37, 211, 102, 0.6);
   }
   .brand-mark svg { width: 18px; height: 18px; }
+  .topbar-actions { display: flex; align-items: center; gap: 18px; }
   .topbar nav { display: flex; gap: 4px; }
   .topbar nav a {
     color: var(--text-muted); text-decoration: none;
@@ -66,6 +67,18 @@
     transition: all 0.15s ease;
   }
   .topbar nav a:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
+  .btn-print {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .btn-print:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+  .btn-print svg { width: 14px; height: 14px; }
 
   @media (max-width: 768px) {
     .topbar nav { display: none; }
@@ -475,16 +488,23 @@
           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
         </svg>
       </div>
-      <span>BANGLAB2BB2C&nbsp;Platform</span>
+      <span>BANGLAB2BB2C&nbsp;Support</span>
     </div>
-    <nav>
-      <a href="#summary">Summary</a>
-      <a href="#features">Features</a>
-      <a href="#screens">Screens</a>
-      <a href="#tech">Tech</a>
-      <a href="#deploy">Deploy</a>
-      <a href="#investment">Investment</a>
-    </nav>
+    <div class="topbar-actions">
+      <nav>
+        <a href="#summary">Summary</a>
+        <a href="#use-cases">Use&nbsp;cases</a>
+        <a href="#features">Features</a>
+        <a href="#screens">Screens</a>
+        <a href="#tech">Tech</a>
+        <a href="#integration">Integration</a>
+        <a href="#rollout">Rollout</a>
+      </nav>
+      <button type="button" class="btn-print" onclick="window.print()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print / PDF
+      </button>
+    </div>
   </div>
 </header>
 
@@ -492,29 +512,34 @@
 <section class="hero" style="border-top: none;">
   <div class="container hero-content">
     <div class="pill">
-      <span class="dot"></span> Project Proposal &middot; Prepared for Bangla B2BB2C Ltd.
+      <span class="dot"></span> Internal Proposal &middot; v1 &middot; Prepared by Engineering
     </div>
     <h1>
-      A full-stack <span class="grad">WhatsApp customer engagement</span> platform —
-      shipped, hardened, and ready for production.
+      The <span class="grad">WhatsApp support backbone</span>
+      for the BANGLAB2BB2C marketplace.
     </h1>
     <p class="lead">
-      Run your entire customer support and marketing operation on WhatsApp Business Cloud
-      from a single workspace: omnichannel inbox, no-code chatbot builder, campaign engine,
-      team management, and analytics — backed by Go, PostgreSQL, and Redis.
+      We've already built and hardened an in-house customer support platform.
+      This document proposes turning it on as the official support channel for our
+      multivendor marketplace — one centralised team handling order tracking,
+      refunds, delivery questions, and vendor escalations over WhatsApp Business.
     </p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="#investment">
-        Review investment
+      <a class="btn btn-primary" href="#use-cases">
+        See marketplace use cases
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
       <a class="btn btn-ghost" href="#features">Explore the feature set</a>
+      <button type="button" class="btn btn-ghost" onclick="window.print()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Save as PDF
+      </button>
     </div>
     <div class="hero-meta">
-      <div><strong>1 binary</strong>Backend + frontend, single Docker image</div>
-      <div><strong>100+</strong>Production features shipped</div>
-      <div><strong>Multi-account</strong>WhatsApp Business Cloud API</div>
-      <div><strong>Real-time</strong>WebSocket-driven inbox</div>
+      <div><strong>In-house</strong>Built and owned by our engineering team</div>
+      <div><strong>Zero SaaS fees</strong>No per-conversation BSP markup</div>
+      <div><strong>Marketplace-native</strong>Plugs into our existing orders &amp; vendors</div>
+      <div><strong>Production-ready</strong>Deployable this sprint</div>
     </div>
   </div>
 </section>
@@ -524,11 +549,12 @@
   <div class="container">
     <div class="section-head">
       <div class="section-eyebrow">Executive Summary</div>
-      <h2>The business case in three lines.</h2>
+      <h2>Why we're proposing this now.</h2>
       <p>
-        Bangla B2BB2C deals with hundreds of incoming WhatsApp conversations every day.
-        This platform consolidates them into one inbox, automates the repetitive ones,
-        and gives leadership visibility — without a per-seat SaaS bill.
+        Our marketplace is generating a growing volume of WhatsApp messages —
+        order tracking, delivery questions, refund requests, vendor escalations.
+        Today these are scattered across personal phones and shared accounts.
+        We have a production-ready, in-house platform that consolidates all of it.
       </p>
     </div>
     <div class="exec-grid">
@@ -536,30 +562,33 @@
         <div class="icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </div>
-        <h3>Centralise every conversation</h3>
+        <h3>One inbox for the whole marketplace</h3>
         <p>
-          One real-time inbox across all your WhatsApp Business numbers. Agents pick up where
-          the bot left off; supervisors see SLA, queue, and load at a glance.
+          Every customer message lands in a single real-time queue. The central support
+          team triages, resolves, or escalates to the right vendor — no phones, no shared
+          accounts, no lost conversations.
         </p>
       </div>
       <div class="exec-card">
         <div class="icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
         </div>
-        <h3>Automate the predictable 70%</h3>
+        <h3>Bot handles the predictable 70%</h3>
         <p>
-          A visual flow builder handles greetings, FAQs, lead capture, order lookup, and
-          out-of-hours routing — so human agents only touch conversations that need them.
+          Order status, delivery ETA, return policy, FAQs — all answered automatically
+          by pulling from our existing orders &amp; product APIs. Agents only get involved
+          when the bot escalates.
         </p>
       </div>
       <div class="exec-card">
         <div class="icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 8L13 13 9 9 3 15"/></svg>
         </div>
-        <h3>Own the data, own the channel</h3>
+        <h3>Zero recurring SaaS cost</h3>
         <p>
-          Self-hosted on your infrastructure. No per-message markup, no vendor lock-in, no
-          customer data leaving Bangla B2BB2C's perimeter. Audit logs cover every action.
+          We pay Meta directly for messaging — no per-conversation markup from a BSP.
+          The platform itself runs on infrastructure we already operate. The build cost
+          is already sunk; only deployment effort remains.
         </p>
       </div>
     </div>
@@ -571,20 +600,108 @@
   <div class="container">
     <div class="metrics-grid">
       <div class="metric">
-        <div class="num">100+</div>
-        <div class="label">Features Shipped</div>
+        <div class="num">~70%</div>
+        <div class="label">Auto-resolved by bot</div>
       </div>
       <div class="metric">
-        <div class="num">14</div>
-        <div class="label">Chatbot Node Types</div>
+        <div class="num">&lt; 1 min</div>
+        <div class="label">Target first-response SLA</div>
       </div>
       <div class="metric">
-        <div class="num">3-Tier</div>
-        <div class="label">Role-Based Access</div>
+        <div class="num">1 binary</div>
+        <div class="label">Backend + frontend, one Docker image</div>
       </div>
       <div class="metric">
         <div class="num">∞</div>
-        <div class="label">Agents &amp; Contacts</div>
+        <div class="label">Vendors, agents, contacts</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MARKETPLACE USE CASES ==================== -->
+<section id="use-cases">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-eyebrow">Marketplace Use Cases</div>
+      <h2>What this changes day-to-day on BANGLAB2BB2C.</h2>
+      <p>
+        Concrete scenarios from a multivendor marketplace, mapped to what the platform
+        already does. Nothing below is hypothetical — every flow is buildable with the
+        nodes that ship today.
+      </p>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>"Where's my order?"</h4>
+          <p>Customer messages the support number. Bot asks for order ID, hits our orders API, replies with live status, courier name, and tracking URL — under 5 seconds, no agent involved.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Refund / return requests</h4>
+          <p>Bot captures the order ID, reason, photo evidence. Creates a return ticket in the marketplace backend via webhook, and routes the conversation to the platform's refund agent only when paperwork is complete.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Vendor-specific escalations</h4>
+          <p>Customer asks something only the vendor can answer (stock, customisation, bulk pricing). Agent attaches the order, generates a vendor-side ticket, and replies once vendor responds — all without leaving the conversation.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Delivery exception nudges</h4>
+          <p>Courier marks an order "delivery failed". Marketplace fires a webhook → platform sends the customer a templated WhatsApp message with reschedule options as buttons. Customer reply triggers a new flow.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Abandoned-cart recovery</h4>
+          <p>Cart inactive 6 hours? Send a soft nudge with the product image + a "complete checkout" CTA. Schedule a follow-up template 24 hours later if still unconverted.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Post-purchase NPS &amp; reviews</h4>
+          <p>Two days after delivery the platform asks "How was your order?" via a list-button rating. Low scores route to support; high scores prompt a product review link.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Payment &amp; checkout help</h4>
+          <p>"Payment failed" or "OTP not received" questions auto-trigger a flow that walks the customer through retry, alternate methods, or transfers to a payments agent if stuck.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Vendor onboarding queue</h4>
+          <p>New vendor applications can use a separate WhatsApp number. Bot captures business name, KYC documents, contact details — agents only step in for verification calls.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Out-of-hours auto-responder</h4>
+          <p>Outside the support team's working hours, bot sets expectations ("we'll reply at 9 AM tomorrow") and queues the conversation — no missed customers, no angry follow-ups.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <h4>Promotional campaigns</h4>
+          <p>Segment customers by past purchases or vendor preference (data already in the marketplace DB), send a Meta-approved promo template to thousands at once with cost preview.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -1410,8 +1527,93 @@
         <line x1="960" y1="145" x2="720" y2="160" stroke="#62708a" stroke-width="1.5" marker-end="url(#arrow)"/>
         <line x1="960" y1="225" x2="720" y2="240" stroke="#62708a" stroke-width="1.5" marker-end="url(#arrow)"/>
 
-        <text x="20" y="350" font-family="system-ui" font-size="11" fill="#62708a">All components run in your VPC. No customer data ever leaves the perimeter.</text>
+        <text x="20" y="350" font-family="system-ui" font-size="11" fill="#62708a">Runs in our own infrastructure. Talks to the marketplace via HTTP only — no shared database.</text>
       </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== INTEGRATION ==================== -->
+<section id="integration">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-eyebrow">Marketplace Integration</div>
+      <h2>How it plugs into our existing platform.</h2>
+      <p>
+        The support system runs as a peer service, not a fork of the marketplace.
+        It talks to our existing backend over HTTP using a service-to-service token.
+        No shared database, no migrations to coordinate.
+      </p>
+    </div>
+
+    <div class="why-grid">
+      <div class="why">
+        <h4>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+          Inbound from marketplace → support
+        </h4>
+        <p>
+          Marketplace emits webhooks when interesting things happen — order placed,
+          payment failed, delivery delayed, cart abandoned, vendor approved. Each
+          webhook can trigger a templated WhatsApp message or kick off a chatbot flow.
+        </p>
+      </div>
+      <div class="why">
+        <h4>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 17 20 21 24 17" transform="rotate(180 16 16)"/><polyline points="16 7 12 3 8 7"/><line x1="12" y1="3" x2="12" y2="14"/></svg>
+          Outbound from support → marketplace
+        </h4>
+        <p>
+          The chatbot's "API Call" node lets a flow query our orders, products,
+          vendors, or refund endpoints in real time and surface the answer to the
+          customer. Reads are read-only; mutations (e.g. "raise refund") go through
+          the same APIs your ops team already uses.
+        </p>
+      </div>
+      <div class="why">
+        <h4>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+          Single sign-on with the admin portal
+        </h4>
+        <p>
+          Support agents log in with their existing marketplace admin credentials
+          via OAuth/SSO. Roles map automatically: a marketplace admin becomes a
+          support superadmin; ops staff become support agents.
+        </p>
+      </div>
+      <div class="why">
+        <h4>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          Single WhatsApp Business number
+        </h4>
+        <p>
+          We register one number (e.g. "BANGLAB2BB2C Support") under our Meta
+          Business Account. All inbound traffic lands in one queue. Vendors keep
+          using their personal phones if they want; nothing forces them onto WhatsApp.
+        </p>
+      </div>
+      <div class="why">
+        <h4>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Customer identity matching
+        </h4>
+        <p>
+          On first message, the bot matches the WhatsApp number against our
+          customers table. Recognised customer? Greet by name, list their recent
+          orders. New number? Capture details and create a lead.
+        </p>
+      </div>
+      <div class="why">
+        <h4>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="12" x2="13" y2="12"/></svg>
+          Vendor visibility
+        </h4>
+        <p>
+          A dashboard widget in the existing vendor portal can show "open
+          customer tickets" per vendor, pulled from this platform's API.
+          Vendors stay informed without needing accounts in the support tool.
+        </p>
+      </div>
     </div>
   </div>
 </section>
@@ -1423,8 +1625,9 @@
       <div class="section-eyebrow">Deployment &amp; Operations</div>
       <h2>One Docker image, one command.</h2>
       <p>
-        We ship as a single Alpine-based Docker image. The Go binary embeds the
-        compiled frontend, so there's no separate web server to manage.
+        The platform builds into a single Alpine-based Docker image. The Go binary
+        embeds the compiled frontend, so there's no separate web server to manage —
+        deployment is one <code>docker compose up -d</code>.
       </p>
     </div>
 
@@ -1467,105 +1670,121 @@
         </div>
         <div class="why">
           <h4><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg> Backups</h4>
-          <p>PostgreSQL dump + Redis RDB are sufficient for a full restore. We document the procedure and provide a shell script.</p>
+          <p>PostgreSQL dump + Redis RDB snapshot are sufficient for a full restore. Daily off-site backups via the existing infrastructure pipeline.</p>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ==================== WHY US ==================== -->
-<section>
+<!-- ==================== ROLLOUT PLAN ==================== -->
+<section id="rollout">
   <div class="container">
     <div class="section-head">
-      <div class="section-eyebrow">Why this platform</div>
-      <h2>Built by an engineer who's lived the support trenches.</h2>
-    </div>
-    <div class="why-grid">
-      <div class="why">
-        <h4><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Self-hosted, sovereign data</h4>
-        <p>Your customers' messages stay in your infrastructure. No SaaS middleman, no third-party data processor agreement, no surprise vendor changes.</p>
-      </div>
-      <div class="why">
-        <h4><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Predictable cost</h4>
-        <p>A flat license + infrastructure cost. You pay Meta directly for messaging — no per-conversation markup like commercial BSPs charge.</p>
-      </div>
-      <div class="why">
-        <h4><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Source available</h4>
-        <p>You get the source code. Audit it, modify it, fork it. Your engineers can add a custom feature in an afternoon instead of waiting for a vendor's roadmap.</p>
-      </div>
-      <div class="why">
-        <h4><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Time to value: days, not months</h4>
-        <p>From "give me the repo" to "agents handling live conversations" is realistically 3-5 working days. No multi-week onboarding consultancy.</p>
-      </div>
-      <div class="why">
-        <h4><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"/><line x1="7" y1="22" x2="7" y2="11"/></svg> Production-grade quality bar</h4>
-        <p>Every commit is reviewed. Migrations are idempotent. Errors are typed and audited. The codebase is the kind that boring works — not the kind that flashy breaks.</p>
-      </div>
-      <div class="why">
-        <h4><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> Live, running today</h4>
-        <p>Visit this very URL on the deployed instance. Every screen pictured above is reachable, every API call works. Nothing here is mocked-up.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== INVESTMENT ==================== -->
-<section id="investment">
-  <div class="container">
-    <div class="section-head">
-      <div class="section-eyebrow">Investment</div>
-      <h2>Three commercial models.</h2>
+      <div class="section-eyebrow">Rollout Plan</div>
+      <h2>From approval to live on WhatsApp in four phases.</h2>
       <p>
-        Pick the engagement that matches your team's capacity. All include the full source
-        license, no feature gating, no per-agent fees.
+        The engineering work is done. What's left is operational —
+        Meta verification, infrastructure, and team training. Realistic
+        end-to-end timeline: 3-4 weeks, with most calendar time spent waiting
+        on Meta's business verification.
       </p>
     </div>
-    <div class="pricing">
-      <div class="plan">
-        <h4>Source License</h4>
-        <p class="desc">For teams who'll run and maintain it themselves.</p>
-        <div class="price">৳ 4,50,000<span>one-time</span></div>
-        <div class="price-note">≈ USD 3,800 · billed once</div>
-        <ul>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Full source code + Docker image</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Deployment documentation</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Unlimited agents &amp; contacts</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 30 days email support</li>
-        </ul>
-        <a class="btn btn-ghost cta" href="mailto:banglab2bb2cinf@gmail.com?subject=Source%20License">Discuss</a>
+
+    <div class="why-grid" style="grid-template-columns: 1fr;">
+      <div class="why">
+        <h4>
+          <span style="background: var(--accent); color: white; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">1</span>
+          Phase 1 — Meta Business setup &nbsp;&middot;&nbsp; <span style="color: var(--text-muted); font-weight: 500;">Week 1</span>
+        </h4>
+        <p style="margin-top: 8px;">
+          Submit our existing Meta Business account for verification (utility bill,
+          trade license). Register the WhatsApp number that will host support
+          conversations. Create the first message templates (order confirmation,
+          delivery update, refund acknowledgement, abandoned-cart nudge).
+          <br/><strong style="color: var(--text);">Owners:</strong> Ops lead + finance for paperwork.
+        </p>
       </div>
-      <div class="plan featured">
-        <h4>Turn-key Deployment</h4>
-        <p class="desc">We deploy on your infrastructure, train your team, and hand over the keys.</p>
-        <div class="price">৳ 6,80,000<span>one-time</span></div>
-        <div class="price-note">≈ USD 5,700 · billed in two tranches</div>
-        <ul>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Everything in Source License</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Production deployment on your VPC</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Meta Business onboarding assistance</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 4 hours of team training (recorded)</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 90 days warranty &amp; support</li>
-        </ul>
-        <a class="btn btn-primary cta" href="mailto:banglab2bb2cinf@gmail.com?subject=Turn-key%20Deployment">Get started</a>
+
+      <div class="why">
+        <h4>
+          <span style="background: var(--brand); color: #061410; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">2</span>
+          Phase 2 — Infrastructure &amp; deploy &nbsp;&middot;&nbsp; <span style="color: var(--text-muted); font-weight: 500;">Week 1-2 (parallel to phase 1)</span>
+        </h4>
+        <p style="margin-top: 8px;">
+          Stand up a VPS (4 vCPU / 8 GB), provision PostgreSQL + Redis, point the
+          marketplace's <code>support.banglab2bb2c.com</code> subdomain at it. Deploy the
+          existing Docker image. Configure env vars from a vault. Smoke-test with
+          internal numbers.
+          <br/><strong style="color: var(--text);">Owners:</strong> Engineering · &nbsp;~2-3 working days.
+        </p>
       </div>
-      <div class="plan">
-        <h4>Managed</h4>
-        <p class="desc">We host, monitor, patch, and respond — you focus on customers.</p>
-        <div class="price">৳ 45,000<span>/ month</span></div>
-        <div class="price-note">≈ USD 380 · 12-month minimum</div>
+
+      <div class="why">
+        <h4>
+          <span style="background: var(--warn); color: #1a1100; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">3</span>
+          Phase 3 — Marketplace integration &nbsp;&middot;&nbsp; <span style="color: var(--text-muted); font-weight: 500;">Week 2</span>
+        </h4>
+        <p style="margin-top: 8px;">
+          Wire the marketplace's existing webhooks to fire on order-placed,
+          payment-failed, delivery-status-changed. Build the first three chatbot
+          flows: <em>"Where's my order?"</em>, <em>Refund request</em>, <em>Out-of-hours
+          auto-responder</em>. Each flow calls back into our orders / refund APIs
+          via the API Call node — no changes needed on the marketplace side beyond
+          adding the webhook endpoints.
+          <br/><strong style="color: var(--text);">Owners:</strong> Engineering · &nbsp;~3-4 working days.
+        </p>
+      </div>
+
+      <div class="why">
+        <h4>
+          <span style="background: var(--accent-2); color: white; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">4</span>
+          Phase 4 — Team training &amp; soft launch &nbsp;&middot;&nbsp; <span style="color: var(--text-muted); font-weight: 500;">Week 3</span>
+        </h4>
+        <p style="margin-top: 8px;">
+          Onboard the 3-5 person initial support team. Train on the inbox UI,
+          canned responses, and the agent transfer flow. Soft-launch to a single
+          city or a single vendor category. Monitor for one week, tune flows
+          based on real conversations. Open the floodgates in week 4.
+          <br/><strong style="color: var(--text);">Owners:</strong> Ops lead + Engineering on standby.
+        </p>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top: 56px;">
+      <div class="section-eyebrow">Resource Requirements</div>
+      <h2 style="font-size: 24px;">What we need approved.</h2>
+    </div>
+    <div class="stack-grid">
+      <div class="stack-card">
+        <h4>People</h4>
         <ul>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Everything in Turn-key Deployment</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Hosting on dedicated VPS</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 24×7 monitoring &amp; alerts</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Daily off-site backups</li>
-          <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 99.5% uptime SLA</li>
+          <li>1 engineer (existing) <span class="ver">~2 weeks</span></li>
+          <li>1 ops lead <span class="ver">~1 week</span></li>
+          <li>3-5 support agents <span class="ver">launch team</span></li>
         </ul>
-        <a class="btn btn-ghost cta" href="mailto:banglab2bb2cinf@gmail.com?subject=Managed%20Hosting">Discuss</a>
+      </div>
+      <div class="stack-card">
+        <h4>Infrastructure</h4>
+        <ul>
+          <li>VPS · 4 vCPU / 8 GB <span class="ver">~ ৳ 4,500 / mo</span></li>
+          <li>Managed Postgres <span class="ver">~ ৳ 2,500 / mo</span></li>
+          <li>Redis (small) <span class="ver">~ ৳ 1,500 / mo</span></li>
+          <li>Object storage <span class="ver">usage-based</span></li>
+        </ul>
+      </div>
+      <div class="stack-card">
+        <h4>Variable (per Meta)</h4>
+        <ul>
+          <li>Service convos <span class="ver">first 1,000 free / mo</span></li>
+          <li>Marketing template <span class="ver">~ ৳ 2-3 / msg, BD</span></li>
+          <li>Utility template <span class="ver">~ ৳ 1.5 / msg, BD</span></li>
+        </ul>
       </div>
     </div>
     <p style="text-align:center; margin-top: 28px; font-size: 13px; color: var(--text-dim);">
-      Prices are indicative. Final scope &amp; timeline confirmed via written proposal after a discovery call.
+      All figures are approximations — finalise with finance before approval.
+      Infrastructure costs scale linearly with conversation volume.
     </p>
   </div>
 </section>
@@ -1574,61 +1793,60 @@
 <section>
   <div class="container" style="max-width: 820px;">
     <div class="section-head">
-      <div class="section-eyebrow">Frequently asked</div>
-      <h2>Things you'll probably ask in the discovery call.</h2>
+      <div class="section-eyebrow">Open Questions</div>
+      <h2>Decisions we need leadership to make.</h2>
     </div>
     <div class="faq">
       <details>
-        <summary>Who controls the Meta WhatsApp Business account?</summary>
+        <summary>Should we start with one WhatsApp number or several?</summary>
         <div class="ans">
-          You do. The platform connects to your Meta Business account using credentials you
-          own. We never have access to your tokens or customers' messages. If you ever stop
-          using the platform, your Meta account stays exactly as it was — only the
-          integration goes away.
+          Recommendation: start with one. A single number is simpler to brand, train agents
+          on, and explain to customers. The platform already supports adding more numbers
+          later — for example a separate vendor-onboarding number — without any rework.
         </div>
       </details>
       <details>
-        <summary>What does it cost to send a WhatsApp message?</summary>
+        <summary>Will vendors get any access to the support inbox?</summary>
         <div class="ans">
-          Meta charges per-conversation, not per-message. Their pricing varies by country and
-          conversation category (marketing / utility / authentication / service). Service
-          conversations initiated by the customer are typically free for the first 1,000 per
-          month per WhatsApp Business Account. Marketing template sends are charged. The
-          platform's Meta Insights tab surfaces the current price-per-conversation live.
+          Not in phase 1. All customer conversations stay with the central support team.
+          What vendors will get is a notification (via the existing vendor portal) when one
+          of their orders has an open support ticket, plus an internal note thread the
+          support agent uses to ask the vendor for input. We can revisit vendor-side
+          agent access later if needed.
         </div>
       </details>
       <details>
-        <summary>Can we customise the platform to match our brand and processes?</summary>
+        <summary>Which message templates do we need on day one?</summary>
         <div class="ans">
-          Yes — the source license gives your engineers full editing rights. Our recommended
-          approach is to keep the upstream untouched and apply your customisations as a
-          small overlay so future updates remain easy to pull in. We can advise on this.
+          Minimum viable set: <em>order confirmation</em>, <em>delivery dispatched</em>,
+          <em>delivery delayed</em>, <em>refund initiated</em>, and an <em>abandoned-cart
+          nudge</em>. Templates need Meta approval (24-48h typically). The platform's
+          template UI lets the ops team add more as the catalog matures.
         </div>
       </details>
       <details>
-        <summary>How long does Meta Business approval typically take in Bangladesh?</summary>
+        <summary>What support hours are we committing to?</summary>
         <div class="ans">
-          Display name verification is usually 1-3 business days. Business verification can
-          take 5-15 business days if Meta requests supporting documents (utility bill,
-          trade license, etc.). We've shepherded several Bangladeshi businesses through this
-          and can hand you a checklist that minimises back-and-forth.
+          Recommendation: 9 AM - 9 PM Bangladesh time on day one. Bot auto-responds outside
+          those hours with an ETA. As volume grows, extend to 24x7 by hiring a small night
+          shift — the assignment engine already supports shift rotations.
         </div>
       </details>
       <details>
-        <summary>What's the realistic minimum infrastructure to run this?</summary>
+        <summary>How do we measure success after launch?</summary>
         <div class="ans">
-          For up to ~50 agents and modest campaign volume: a single 4 vCPU / 8 GB VPS with
-          a managed PostgreSQL (or a second small VPS for the database) and a small Redis
-          instance. Storage scales with media volume — most customers see 5-20 GB / month.
+          Three KPIs we should agree on up-front: (1) median first-response time (&lt; 1
+          minute target), (2) bot self-service rate (target ~70% within 3 months), and
+          (3) customer satisfaction via post-conversation NPS (target &gt; 4.2 / 5).
+          All three are visible on the analytics dashboard from day one.
         </div>
       </details>
       <details>
-        <summary>What happens if the WhatsApp Cloud API changes?</summary>
+        <summary>What happens to existing support channels (email, phone)?</summary>
         <div class="ans">
-          Meta versions their API; we pin a version per account. When Meta deprecates an
-          endpoint they typically give 12-18 months of overlap. Under the Managed plan
-          we ship the upgrade before deprecation. Under the License / Turn-key plans we
-          offer a discounted upgrade SKU.
+          Recommendation: keep them. WhatsApp becomes the primary channel because that's
+          where customers already are, but email and phone stay as backups. The audit log
+          gives us six months of data to decide whether to deprecate any of them.
         </div>
       </details>
     </div>
@@ -1644,11 +1862,11 @@
           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
         </svg>
       </div>
-      <span>BANGLAB2BB2C&nbsp;Platform</span>
+      <span>BANGLAB2BB2C&nbsp;Support</span>
     </div>
-    <p>Proposal prepared for Bangla B2BB2C Ltd.</p>
-    <p>Contact &middot; <a href="mailto:banglab2bb2cinf@gmail.com" style="color: var(--brand); text-decoration: none;">banglab2bb2cinf@gmail.com</a></p>
-    <p style="margin-top: 16px;">&copy; 2026 BANGLAB2BB2C. This document is confidential.</p>
+    <p>Internal proposal &middot; Prepared by Engineering &middot; v1</p>
+    <p>Questions &middot; <a href="mailto:banglab2bb2cinf@gmail.com" style="color: var(--brand); text-decoration: none;">banglab2bb2cinf@gmail.com</a></p>
+    <p style="margin-top: 16px;">&copy; 2026 BANGLAB2BB2C. Internal — not for external distribution.</p>
   </div>
 </footer>
 
