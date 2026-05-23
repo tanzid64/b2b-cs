@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,10 +18,12 @@ import (
 // zero value (nil), which is treated as "unset" by the audit comparator.
 func generalSettingsSnapshot(name string, settings models.JSONB) map[string]any {
 	return map[string]any{
-		"name":               name,
-		"timezone":           settings["timezone"],
-		"date_format":        settings["date_format"],
-		"mask_phone_numbers": settings["mask_phone_numbers"],
+		"name":                    name,
+		"timezone":                settings["timezone"],
+		"date_format":             settings["date_format"],
+		"mask_phone_numbers":      settings["mask_phone_numbers"],
+		"agent_signature_enabled": settings["agent_signature_enabled"],
+		"bot_signature_name":      settings["bot_signature_name"],
 	}
 }
 
@@ -29,6 +32,11 @@ type OrganizationSettings struct {
 	MaskPhoneNumbers bool   `json:"mask_phone_numbers"`
 	Timezone         string `json:"timezone"`
 	DateFormat       string `json:"date_format"`
+	// Auto-append "— <agent name>" / "— <bot name>" to outgoing text /
+	// caption / interactive body messages so customers always know who
+	// they're talking to. Templates are excluded (Meta-approved shape).
+	AgentSignatureEnabled bool   `json:"agent_signature_enabled"`
+	BotSignatureName      string `json:"bot_signature_name"`
 }
 
 // GetOrganizationSettings returns the organization settings
@@ -43,11 +51,14 @@ func (a *App) GetOrganizationSettings(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusNotFound, "Organization not found", nil, "")
 	}
 
-	// Parse settings from JSONB
+	// Parse settings from JSONB. Defaults below apply when the field has
+	// never been written for this org.
 	settings := OrganizationSettings{
-		MaskPhoneNumbers: false,
-		Timezone:         "UTC",
-		DateFormat:       "YYYY-MM-DD",
+		MaskPhoneNumbers:      false,
+		Timezone:              "UTC",
+		DateFormat:            "YYYY-MM-DD",
+		AgentSignatureEnabled: true,
+		BotSignatureName:      "Support Bot",
 	}
 
 	if org.Settings != nil {
@@ -59,6 +70,12 @@ func (a *App) GetOrganizationSettings(r *fastglue.Request) error {
 		}
 		if v, ok := org.Settings["date_format"].(string); ok && v != "" {
 			settings.DateFormat = v
+		}
+		if v, ok := org.Settings["agent_signature_enabled"].(bool); ok {
+			settings.AgentSignatureEnabled = v
+		}
+		if v, ok := org.Settings["bot_signature_name"].(string); ok {
+			settings.BotSignatureName = v
 		}
 	}
 
@@ -76,10 +93,12 @@ func (a *App) UpdateOrganizationSettings(r *fastglue.Request) error {
 	}
 
 	var req struct {
-		MaskPhoneNumbers *bool   `json:"mask_phone_numbers"`
-		Timezone         *string `json:"timezone"`
-		DateFormat       *string `json:"date_format"`
-		Name             *string `json:"name"`
+		MaskPhoneNumbers      *bool   `json:"mask_phone_numbers"`
+		Timezone              *string `json:"timezone"`
+		DateFormat            *string `json:"date_format"`
+		Name                  *string `json:"name"`
+		AgentSignatureEnabled *bool   `json:"agent_signature_enabled"`
+		BotSignatureName      *string `json:"bot_signature_name"`
 	}
 
 	if err := json.Unmarshal(r.RequestCtx.PostBody(), &req); err != nil {
@@ -94,7 +113,9 @@ func (a *App) UpdateOrganizationSettings(r *fastglue.Request) error {
 	// Snapshot before mutation so we can compute a diff.
 	oldGeneral := generalSettingsSnapshot(org.Name, org.Settings)
 
-	generalTouched := req.MaskPhoneNumbers != nil || req.Timezone != nil || req.DateFormat != nil || (req.Name != nil && *req.Name != "")
+	generalTouched := req.MaskPhoneNumbers != nil || req.Timezone != nil || req.DateFormat != nil ||
+		(req.Name != nil && *req.Name != "") ||
+		req.AgentSignatureEnabled != nil || req.BotSignatureName != nil
 
 	// Update settings
 	if org.Settings == nil {
@@ -112,6 +133,12 @@ func (a *App) UpdateOrganizationSettings(r *fastglue.Request) error {
 	}
 	if req.Name != nil && *req.Name != "" {
 		org.Name = *req.Name
+	}
+	if req.AgentSignatureEnabled != nil {
+		org.Settings["agent_signature_enabled"] = *req.AgentSignatureEnabled
+	}
+	if req.BotSignatureName != nil {
+		org.Settings["bot_signature_name"] = strings.TrimSpace(*req.BotSignatureName)
 	}
 
 	if err := a.DB.Save(&org).Error; err != nil {

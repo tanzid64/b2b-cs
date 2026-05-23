@@ -36,7 +36,9 @@ const generalSettings = ref({
   organization_name: 'My Organization',
   default_timezone: 'UTC',
   date_format: 'YYYY-MM-DD',
-  mask_phone_numbers: false
+  mask_phone_numbers: false,
+  agent_signature_enabled: true,
+  bot_signature_name: 'Support Bot'
 })
 
 // Notification Settings
@@ -70,7 +72,9 @@ onMounted(async () => {
         organization_name: orgData.name || 'My Organization',
         default_timezone: orgData.settings?.timezone || 'UTC',
         date_format: orgData.settings?.date_format || 'YYYY-MM-DD',
-        mask_phone_numbers: orgData.settings?.mask_phone_numbers || false
+        mask_phone_numbers: orgData.settings?.mask_phone_numbers || false,
+        agent_signature_enabled: orgData.settings?.agent_signature_enabled ?? true,
+        bot_signature_name: orgData.settings?.bot_signature_name || 'Support Bot'
       }
     }
 
@@ -97,7 +101,9 @@ async function saveGeneralSettings() {
       name: generalSettings.value.organization_name,
       timezone: generalSettings.value.default_timezone,
       date_format: generalSettings.value.date_format,
-      mask_phone_numbers: generalSettings.value.mask_phone_numbers
+      mask_phone_numbers: generalSettings.value.mask_phone_numbers,
+      agent_signature_enabled: generalSettings.value.agent_signature_enabled,
+      bot_signature_name: generalSettings.value.bot_signature_name
     })
     toast.success(t('settings.generalSaved'))
     refreshActivityLog(generalLogKey)
@@ -200,6 +206,35 @@ async function saveNotificationSettings() {
                     :checked="generalSettings.mask_phone_numbers"
                     @update:checked="generalSettings.mask_phone_numbers = $event"
                   />
+                </div>
+                <Separator class="bg-white/[0.08] light:bg-gray-200" />
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="font-medium text-white light:text-gray-900">{{ $t('settings.agentSignature', 'Agent signature') }}</p>
+                    <p class="text-sm text-white/40 light:text-gray-500">
+                      {{ $t('settings.agentSignatureDesc', 'Append the agent’s name (or the bot’s name) to every outgoing reply so customers always know who they’re talking to.') }}
+                    </p>
+                  </div>
+                  <Switch
+                    :checked="generalSettings.agent_signature_enabled"
+                    @update:checked="generalSettings.agent_signature_enabled = $event"
+                  />
+                </div>
+                <div v-if="generalSettings.agent_signature_enabled" class="grid gap-2 pl-1">
+                  <Label for="bot_signature_name" class="text-white/70 light:text-gray-700 text-xs">
+                    {{ $t('settings.botSignatureName', 'Bot signature name') }}
+                  </Label>
+                  <Input
+                    id="bot_signature_name"
+                    v-model="generalSettings.bot_signature_name"
+                    type="text"
+                    maxlength="40"
+                    placeholder="Support Bot"
+                    class="bg-white/[0.04] border-white/[0.1] text-white light:bg-white light:border-gray-200 light:text-gray-900 max-w-xs"
+                  />
+                  <p class="text-xs text-white/40 light:text-gray-500">
+                    {{ $t('settings.botSignatureNameDesc', 'Used as the signature on chatbot replies. Agent replies sign with the agent’s own name.') }}
+                  </p>
                 </div>
                 <div class="flex justify-end">
                   <Button variant="outline" size="sm" class="bg-white/[0.04] border-white/[0.1] text-white/70 hover:bg-white/[0.08] hover:text-white light:bg-white light:border-gray-200 light:text-gray-700 light:hover:bg-gray-50" @click="saveGeneralSettings" :disabled="isSubmitting">

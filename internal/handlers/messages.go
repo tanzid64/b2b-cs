@@ -137,6 +137,13 @@ func SLASendOptions() MessageSendOptions {
 // SendOutgoingMessage is the unified method for sending all types of WhatsApp messages.
 // It handles: text, media (image/video/audio/document), interactive (buttons/list/cta_url), and template messages.
 func (a *App) SendOutgoingMessage(ctx context.Context, req OutgoingMessageRequest, opts MessageSendOptions) (*models.Message, error) {
+	// Append "— <agent>" or "— <bot>" signature to free-form copy.
+	// Templates are excluded — Meta enforces an approved structure and
+	// adding a trailing line would invalidate the placeholder match.
+	if req.Type != models.MessageTypeTemplate {
+		a.applyOutgoingSignature(&req, opts.SentByUserID)
+	}
+
 	// 1. Create message record
 	msg := a.createOutgoingMessage(req, opts)
 
@@ -918,4 +925,68 @@ func (a *App) SendTemplateMessage(r *fastglue.Request) error {
 		UpdatedAt:       message.UpdatedAt,
 	}
 	return r.SendEnvelope(response)
+}
+
+// ============================================================================
+// Outgoing-message signature ("— Agent Name" / "— Support Bot")
+// ============================================================================
+
+// applyOutgoingSignature mutates req's free-form text fields to append a
+// signature line, when the org has signatures enabled. SentByUserID nil
+// means a bot/system send and uses the configured bot signature name.
+func (a *App) applyOutgoingSignature(req *OutgoingMessageRequest, sentByUserID *uuid.UUID) {
+	if req == nil || req.Account == nil {
+		return
+	}
+	sig := a.computeOutgoingSignature(req.Account.OrganizationID, sentByUserID)
+	if sig == "" {
+		return
+	}
+	req.Content = appendSignatureLine(req.Content, sig)
+	req.Caption = appendSignatureLine(req.Caption, sig)
+	req.BodyText = appendSignatureLine(req.BodyText, sig)
+}
+
+// computeOutgoingSignature returns the name to sign with, or "" if
+// signatures are disabled for the org / nothing useful resolves.
+func (a *App) computeOutgoingSignature(orgID uuid.UUID, sentByUserID *uuid.UUID) string {
+	var org models.Organization
+	if err := a.DB.Select("settings").Where("id = ?", orgID).First(&org).Error; err != nil {
+		return ""
+	}
+	// Default-on: signatures apply unless the org explicitly disables them.
+	enabled := true
+	if v, ok := org.Settings["agent_signature_enabled"].(bool); ok {
+		enabled = v
+	}
+	if !enabled {
+		return ""
+	}
+
+	if sentByUserID != nil {
+		var user models.User
+		if err := a.DB.Select("full_name").Where("id = ?", *sentByUserID).First(&user).Error; err != nil {
+			return ""
+		}
+		return strings.TrimSpace(user.FullName)
+	}
+
+	// Bot / system send. Fall back to a sensible default if the org
+	// hasn't customised the name.
+	botName, _ := org.Settings["bot_signature_name"].(string)
+	botName = strings.TrimSpace(botName)
+	if botName == "" {
+		botName = "Support Bot"
+	}
+	return botName
+}
+
+// appendSignatureLine returns text with "\n\n— <sig>" appended when text
+// is non-empty. Empty input passes through so we don't accidentally send
+// a bare signature with no message body.
+func appendSignatureLine(text, sig string) string {
+	if strings.TrimSpace(text) == "" || sig == "" {
+		return text
+	}
+	return text + "\n\n— " + sig
 }
