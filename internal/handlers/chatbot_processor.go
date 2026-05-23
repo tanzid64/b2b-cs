@@ -964,6 +964,8 @@ func (a *App) generateAIResponse(settings *models.ChatbotSettings, session *mode
 		return a.generateAnthropicResponse(settings, session, userMessage, contextData)
 	case models.AIProviderGoogle:
 		return a.generateGoogleResponse(settings, session, userMessage, contextData)
+	case models.AIProviderDeepSeek:
+		return a.generateDeepSeekResponse(settings, session, userMessage, contextData)
 	default:
 		return "", fmt.Errorf("unsupported AI provider: %s", settings.AI.Provider)
 	}
@@ -1165,6 +1167,114 @@ func (a *App) generateOpenAIResponse(settings *models.ChatbotSettings, session *
 	}
 
 	return "", fmt.Errorf("no response from OpenAI")
+}
+
+// generateDeepSeekResponse generates a response using DeepSeek API
+func (a *App) generateDeepSeekResponse(settings *models.ChatbotSettings, session *models.ChatbotSession, userMessage string, contextData string) (string, error) {
+	url := "https://api.deepseek.com/chat/completions"
+
+	// Build messages array
+	messages := []map[string]string{}
+
+	// Build system prompt with context
+	systemPrompt := settings.AI.SystemPrompt
+	if contextData != "" {
+		if systemPrompt != "" {
+			systemPrompt = systemPrompt + "\n\n" + contextData
+		} else {
+			systemPrompt = contextData
+		}
+	}
+
+	// Add system prompt if configured
+	if systemPrompt != "" {
+		messages = append(messages, map[string]string{
+			"role":    "system",
+			"content": systemPrompt,
+		})
+	}
+
+	// Add conversation history if enabled
+	if settings.AI.IncludeHistory && session != nil {
+		history := a.getSessionHistory(session.ID, settings.AI.HistoryLimit)
+		for _, msg := range history {
+			role := "user"
+			if msg.Direction == models.DirectionOutgoing {
+				role = "assistant"
+			}
+			messages = append(messages, map[string]string{
+				"role":    role,
+				"content": msg.Message,
+			})
+		}
+	}
+
+	// Add current user message
+	messages = append(messages, map[string]string{
+		"role":    "user",
+		"content": userMessage,
+	})
+
+	payload := map[string]any{
+		"model":      settings.AI.Model,
+		"messages":   messages,
+		"max_tokens": settings.AI.MaxTokens,
+	}
+
+	if settings.AI.Temperature > 0 {
+		payload["temperature"] = settings.AI.Temperature
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+settings.AI.APIKey)
+
+	resp, err := a.HTTPClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		var errResp struct {
+			Error struct {
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		_ = json.Unmarshal(body, &errResp)
+		if errResp.Error.Message != "" {
+			return "", fmt.Errorf("DeepSeek API error: %s", errResp.Error.Message)
+		}
+		return "", fmt.Errorf("DeepSeek API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if len(result.Choices) > 0 {
+		return strings.TrimSpace(result.Choices[0].Message.Content), nil
+	}
+
+	return "", fmt.Errorf("no response from DeepSeek")
 }
 
 // generateAnthropicResponse generates a response using Anthropic API

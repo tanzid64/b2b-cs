@@ -1068,6 +1068,48 @@ func TestApp_GetChatbotSettings_ExistingSettings(t *testing.T) {
 		assert.Equal(t, "gpt-4o", resp.Data.Settings.AIModel)
 	})
 
+	t.Run("GetChatbotSettings returns configured settings with DeepSeek", func(t *testing.T) {
+		app := newTestApp(t)
+		org := testutil.CreateTestOrganization(t, app.DB)
+		user := testutil.CreateTestUser(t, app.DB, org.ID)
+
+		// Create settings directly in the DB
+		settings := &models.ChatbotSettings{
+			BaseModel:          models.BaseModel{ID: uuid.New()},
+			OrganizationID:     org.ID,
+			IsEnabled:          true,
+			DefaultResponse:    "Custom greeting!",
+			FallbackMessage:    "I do not understand.",
+			SessionTimeoutMins: 45,
+			AI: models.AIConfig{
+				Enabled:  true,
+				Provider: models.AIProviderDeepSeek,
+				Model:    "deepseek-v4-flash",
+			},
+		}
+		require.NoError(t, app.DB.Create(settings).Error)
+
+		req := testutil.NewGETRequest(t)
+		testutil.SetAuthContext(req, org.ID, user.ID)
+
+		err := app.GetChatbotSettings(req)
+		require.NoError(t, err)
+		assert.Equal(t, fasthttp.StatusOK, testutil.GetResponseStatusCode(req))
+
+		var resp struct {
+			Data struct {
+				Settings handlers.ChatbotSettingsResponse `json:"settings"`
+			} `json:"data"`
+		}
+		err = json.Unmarshal(testutil.GetResponseBody(req), &resp)
+		require.NoError(t, err)
+
+		assert.True(t, resp.Data.Settings.Enabled)
+		assert.True(t, resp.Data.Settings.AIEnabled)
+		assert.Equal(t, models.AIProviderDeepSeek, resp.Data.Settings.AIProvider)
+		assert.Equal(t, "deepseek-v4-flash", resp.Data.Settings.AIModel)
+	})
+
 	t.Run("stats reflect actual data counts", func(t *testing.T) {
 		app := newTestApp(t)
 		org := testutil.CreateTestOrganization(t, app.DB)
