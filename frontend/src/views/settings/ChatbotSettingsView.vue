@@ -142,6 +142,31 @@ const aiProviders = [
   { value: 'deepseek', label: 'DeepSeek', models: ['deepseek-v4-flash', 'deepseek-v4-pro'] }
 ]
 
+const isAITesting = ref(false)
+const aiTestResult = ref<{ success: boolean; response?: string; error?: string; provider?: string; model?: string; latency_ms?: number } | null>(null)
+
+async function testAIConnection() {
+  isAITesting.value = true
+  aiTestResult.value = null
+  try {
+    const payload: any = {}
+    if (aiSettings.value.ai_provider) payload.provider = aiSettings.value.ai_provider
+    if (aiSettings.value.ai_api_key) payload.api_key = aiSettings.value.ai_api_key
+    if (aiSettings.value.ai_model) payload.model = aiSettings.value.ai_model
+    if (aiSettings.value.ai_max_tokens) payload.max_tokens = aiSettings.value.ai_max_tokens
+
+    const res = await chatbotService.testAI(payload)
+    aiTestResult.value = res.data?.data || res.data
+  } catch (error: any) {
+    aiTestResult.value = {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Unknown error'
+    }
+  } finally {
+    isAITesting.value = false
+  }
+}
+
 const availableModels = computed(() => {
   const provider = aiProviders.find(p => p.value === aiSettings.value.ai_provider)
   return provider?.models || []
@@ -954,6 +979,49 @@ function removeEscalationUser(userId: string) {
                       :placeholder="$t('chatbotSettings.systemPromptPlaceholder') + '...'"
                       :rows="3"
                     />
+                  </div>
+
+                  <!-- Test AI Connection -->
+                  <Separator />
+                  <div class="space-y-3">
+                    <div>
+                      <p class="font-medium">{{ $t('chatbotSettings.testAI') }}</p>
+                      <p class="text-sm text-muted-foreground">{{ $t('chatbotSettings.testAIDesc') }}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        @click="testAIConnection"
+                        :disabled="isAITesting || !aiSettings.ai_provider || !aiSettings.ai_model"
+                      >
+                        <Loader2 v-if="isAITesting" class="mr-2 h-4 w-4 animate-spin" />
+                        {{ isAITesting ? $t('chatbotSettings.testAIRunning') : $t('chatbotSettings.testAI') }}
+                      </Button>
+                    </div>
+
+                    <div v-if="aiTestResult" class="rounded-lg border p-4 space-y-2"
+                         :class="aiTestResult.success ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'">
+                      <div class="flex items-center gap-2">
+                        <span v-if="aiTestResult.success" class="text-green-600 dark:text-green-400 font-medium">
+                          ✓ {{ $t('chatbotSettings.testAISuccess') }}
+                        </span>
+                        <span v-else class="text-red-600 dark:text-red-400 font-medium">
+                          ✗ {{ $t('chatbotSettings.testAIFailed') }}
+                        </span>
+                      </div>
+                      <div v-if="aiTestResult.provider" class="text-sm text-muted-foreground">
+                        {{ $t('chatbotSettings.testAIProvider') }}: {{ aiTestResult.provider }} ·
+                        {{ $t('chatbotSettings.testAIModel') }}: {{ aiTestResult.model }}
+                        <span v-if="aiTestResult.latency_ms"> · {{ $t('chatbotSettings.testAILatency') }}: {{ aiTestResult.latency_ms }}ms</span>
+                      </div>
+                      <div v-if="aiTestResult.success && aiTestResult.response" class="text-sm bg-muted/50 rounded p-2">
+                        <span class="font-medium">{{ $t('chatbotSettings.testAIResponse') }}:</span> {{ aiTestResult.response }}
+                      </div>
+                      <div v-if="!aiTestResult.success && aiTestResult.error" class="text-sm text-red-600 dark:text-red-400">
+                        {{ aiTestResult.error }}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

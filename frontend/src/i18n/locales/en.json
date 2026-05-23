@@ -1757,7 +1757,17 @@
     "aiSettingsSaved": "AI settings saved",
     "slaSettingsSaved": "SLA settings saved",
     "aiSaveFailed": "Failed to save AI settings",
-    "slaSaveFailed": "Failed to save SLA settings"
+    "slaSaveFailed": "Failed to save SLA settings",
+    "testAI": "Test AI Connection",
+    "testAIDesc": "Send a test message to verify your AI provider is configured correctly",
+    "testAISuccess": "AI connection successful!",
+    "testAIFailed": "AI connection failed",
+    "testAIRunning": "Testing...",
+    "testAIResponse": "AI Response",
+    "testAILatency": "Latency",
+    "testAIProvider": "Provider",
+    "testAIModel": "Model",
+    "testAISaveFirst": "Save your AI settings first before testing"
   },
   "agentTransfers": {
     "title": "Transfers",

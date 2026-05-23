@@ -1452,3 +1452,92 @@ func (a *App) getChatbotStats(orgID uuid.UUID) ChatbotStatsResponse {
 
 	return stats
 }
+
+// TestAI tests the AI provider configuration by sending a short prompt
+// and returning the response, latency, and model info.
+func (a *App) TestAI(r *fastglue.Request) error {
+	orgID, err := a.getOrgID(r)
+	if err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, "Unauthorized", nil, "")
+	}
+
+	var req struct {
+		Provider   string `json:"provider"`
+		APIKey     string `json:"api_key"`
+		Model      string `json:"model"`
+		MaxTokens  int    `json:"max_tokens"`
+		Provider2  string `json:"provider2"`
+		APIKey2    string `json:"api_key2"`
+		Model2     string `json:"model2"`
+	}
+	if err := json.Unmarshal(r.RequestCtx.PostBody(), &req); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid request body", nil, "")
+	}
+
+	provider := models.AIProvider(req.Provider)
+	apiKey := req.APIKey
+	model := req.Model
+	maxTokens := req.MaxTokens
+
+	if provider == "" || apiKey == "" || model == "" {
+		var settings models.ChatbotSettings
+		if err := a.DB.Where("organization_id = ? AND whats_app_account = ?", orgID, "").First(&settings).Error; err != nil {
+			return r.SendErrorEnvelope(fasthttp.StatusNotFound, "AI not configured. Save your AI settings first.", nil, "")
+		}
+		if provider == "" {
+			provider = settings.AI.Provider
+		}
+		if apiKey == "" {
+			apiKey = settings.AI.APIKey
+		}
+		if model == "" {
+			model = settings.AI.Model
+		}
+		if maxTokens == 0 {
+			maxTokens = settings.AI.MaxTokens
+		}
+	}
+
+	if maxTokens == 0 {
+		maxTokens = 100
+	}
+
+	if provider == "" || apiKey == "" || model == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Provider, API key, and model are required", nil, "")
+	}
+
+	testSettings := &models.ChatbotSettings{
+		AI: models.AIConfig{
+			Enabled:    true,
+			Provider:   provider,
+			APIKey:     apiKey,
+			Model:      model,
+			MaxTokens:  maxTokens,
+			SystemPrompt: "You are a helpful assistant. Respond briefly.",
+		},
+	}
+
+	testMessage := "Hello! Please respond with a short greeting to confirm you are working."
+
+	start := time.Now()
+	response, err := a.generateAIResponse(testSettings, nil, testMessage)
+	elapsed := time.Since(start)
+
+	if err != nil {
+		return r.SendEnvelope(map[string]any{
+			"success":  false,
+			"error":    err.Error(),
+			"provider": string(provider),
+			"model":    model,
+			"latency_ms": elapsed.Milliseconds(),
+		})
+	}
+
+	return r.SendEnvelope(map[string]any{
+		"success":   true,
+		"response":  response,
+		"provider":  string(provider),
+		"model":     model,
+		"latency_ms": elapsed.Milliseconds(),
+	})
+}

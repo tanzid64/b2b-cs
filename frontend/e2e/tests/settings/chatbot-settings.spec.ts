@@ -286,6 +286,7 @@ test.describe('AI Tab', () => {
     await page.locator('button[role="combobox"]').first().click()
     await expect(page.locator('[role="option"]').filter({ hasText: 'OpenAI' })).toBeVisible()
     await expect(page.locator('[role="option"]').filter({ hasText: 'Anthropic' })).toBeVisible()
+    await expect(page.locator('[role="option"]').filter({ hasText: 'DeepSeek' })).toBeVisible()
     await page.keyboard.press('Escape')
   })
 

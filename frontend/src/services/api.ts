@@ -344,6 +344,8 @@ export const chatbotService = {
   // Settings
   getSettings: () => api.get('/chatbot/settings'),
   updateSettings: (data: any) => api.put('/chatbot/settings', data),
+  testAI: (data: { provider?: string; api_key?: string; model?: string; max_tokens?: number }) =>
+    api.post('/chatbot/test-ai', data),
 
   // Keywords
   listKeywords: (params?: { search?: string; page?: number; limit?: number }) =>
