@@ -3,8 +3,10 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useContactsStore } from '@/stores/contacts'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
 import {
   MessageSquare,
   ChevronLeft,
@@ -15,6 +17,7 @@ import {
 import { wsService } from '@/services/websocket'
 import { authService } from '@/services/api'
 import UserMenu from './UserMenu.vue'
+import NotificationBell from './NotificationBell.vue'
 import { ScrollToTop } from '@/components/shared'
 import { navigationSections, type NavSection } from './navigation'
 
@@ -23,6 +26,7 @@ useI18n() // Enable $t() in template
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const contactsStore = useContactsStore()
 const isCollapsed = ref(false)
 const isMobileMenuOpen = ref(false)
 
@@ -40,6 +44,13 @@ onMounted(() => {
         return null
       }
     })
+
+    // Pre-warm contacts so the sidebar Chat badge has a real count even
+    // before the user visits /chat. Skipped when the user lacks 'chat'
+    // permission. Subsequent WS pushes keep the count live.
+    if (authStore.hasPermission('chat', 'read')) {
+      contactsStore.fetchContacts()
+    }
   }
 })
 
@@ -205,6 +216,15 @@ const handleLogout = async () => {
                 >
                   <component :is="item.icon" class="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span :class="isCollapsed && 'md:sr-only'">{{ $t(item.name) }}</span>
+                  <Badge
+                    v-if="item.path === '/chat' && contactsStore.totalUnreadCount > 0"
+                    :class="[
+                      'ml-auto flex-shrink-0 h-5 text-[10px] bg-emerald-500/20 text-emerald-400 light:bg-emerald-100 light:text-emerald-700',
+                      isCollapsed && 'md:hidden'
+                    ]"
+                  >
+                    {{ contactsStore.totalUnreadCount > 99 ? '99+' : contactsStore.totalUnreadCount }}
+                  </Badge>
                 </RouterLink>
 
                 <!-- Submenu items -->
@@ -276,6 +296,11 @@ const handleLogout = async () => {
             </template>
           </template>
         </template>
+      </div>
+
+      <!-- Notifications bell -->
+      <div class="border-t border-white/[0.06] light:border-gray-200 px-2 py-1.5">
+        <NotificationBell :collapsed="isCollapsed" />
       </div>
 
       <!-- User Menu -->

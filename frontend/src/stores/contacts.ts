@@ -106,6 +106,11 @@ export const useContactsStore = defineStore('contacts', () => {
   // visible list is whatever the server returned — no extra local filtering.
   const filteredContacts = computed(() => contacts.value)
 
+  // Total unread across all loaded contacts. Drives the sidebar Chat badge.
+  const totalUnreadCount = computed(() =>
+    contacts.value.reduce((sum, c) => sum + (c.unread_count || 0), 0)
+  )
+
   const sortedContacts = computed(() => {
     return [...filteredContacts.value].sort((a, b) => {
       const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0
@@ -385,6 +390,7 @@ export const useContactsStore = defineStore('contacts', () => {
     replyingTo,
     filteredContacts,
     sortedContacts,
+    totalUnreadCount,
     // Contacts pagination
     contactsTotal,
     hasMoreContacts,

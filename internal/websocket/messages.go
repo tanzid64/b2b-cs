@@ -26,6 +26,11 @@ const (
 	TypeTransferExpired     = "transfer_expired"
 	TypeTransferEscalated   = "transfer_escalated"
 
+	// Bell notifications — targeted at a specific user when their
+	// customer replies on a chat they own (active transfer with this
+	// user as agent_id). Frontend renders a bell + browser notification.
+	TypeAgentNewMessage = "agent_new_message"
+
 	// Campaign types
 	TypeCampaignStatsUpdate = "campaign_stats_update"
 

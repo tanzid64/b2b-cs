@@ -515,6 +515,53 @@ func (a *App) broadcastNewMessage(orgID uuid.UUID, msg *models.Message, contact 
 		Type:    websocket.TypeNewMessage,
 		Payload: payload,
 	})
+
+	// Additionally send a targeted bell event to the agent who owns this
+	// chat (active transfer with agent_id set) when the customer replies.
+	// Outgoing messages and transfers without an assigned agent are
+	// skipped — those don't warrant a personal bell.
+	if msg.Direction == models.DirectionIncoming {
+		a.notifyAssignedAgentOfReply(orgID, msg, contact)
+	}
+}
+
+// notifyAssignedAgentOfReply looks up the active transfer for the contact
+// and, if a human agent owns it, sends a bell-targeted WS event to that
+// user. Errors are swallowed and logged — the main broadcast must not be
+// blocked by notification side effects.
+func (a *App) notifyAssignedAgentOfReply(orgID uuid.UUID, msg *models.Message, contact *models.Contact) {
+	var transfer models.AgentTransfer
+	err := a.DB.
+		Where("organization_id = ? AND contact_id = ? AND status = ? AND agent_id IS NOT NULL",
+			orgID, contact.ID, models.TransferStatusActive).
+		First(&transfer).Error
+	if err != nil || transfer.AgentID == nil {
+		return
+	}
+
+	profileName := contact.ProfileName
+	if a.ShouldMaskPhoneNumbers(orgID) {
+		profileName = utils.MaskIfPhoneNumber(profileName)
+	}
+
+	preview := msg.Content
+	if len(preview) > 140 {
+		preview = preview[:140] + "…"
+	}
+
+	a.Log.Info("Notifying assigned agent of customer reply",
+		"agent_id", transfer.AgentID, "contact_id", contact.ID, "message_id", msg.ID)
+	a.WSHub.BroadcastToUser(orgID, *transfer.AgentID, websocket.WSMessage{
+		Type: websocket.TypeAgentNewMessage,
+		Payload: map[string]any{
+			"message_id":   msg.ID.String(),
+			"contact_id":   contact.ID.String(),
+			"contact_name": profileName,
+			"phone_number": contact.PhoneNumber,
+			"preview":      preview,
+			"created_at":   msg.CreatedAt,
+		},
+	})
 }
 
 // broadcastReactionUpdate broadcasts a reaction update via WebSocket

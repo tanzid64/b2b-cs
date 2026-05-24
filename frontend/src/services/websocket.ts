@@ -2,6 +2,8 @@ import { useContactsStore } from '@/stores/contacts'
 import { useTransfersStore } from '@/stores/transfers'
 import { useAuthStore } from '@/stores/auth'
 import { useNotesStore } from '@/stores/notes'
+import { useNotificationsStore } from '@/stores/notifications'
+import { browserNotifications } from '@/services/browserNotifications'
 import { contactsService } from '@/services/api'
 import { toast } from 'vue-sonner'
 import router from '@/router'
@@ -56,6 +58,7 @@ const WS_TYPE_AGENT_TRANSFER = 'agent_transfer'
 const WS_TYPE_AGENT_TRANSFER_RESUME = 'agent_transfer_resume'
 const WS_TYPE_AGENT_TRANSFER_ASSIGN = 'agent_transfer_assign'
 const WS_TYPE_TRANSFER_ESCALATION = 'transfer_escalation'
+const WS_TYPE_AGENT_NEW_MESSAGE = 'agent_new_message'
 
 // Campaign types
 const WS_TYPE_CAMPAIGN_STATS_UPDATE = 'campaign_stats_update'
@@ -175,6 +178,9 @@ class WebSocketService {
           break
         case WS_TYPE_TRANSFER_ESCALATION:
           this.handleTransferEscalation(message.payload)
+          break
+        case WS_TYPE_AGENT_NEW_MESSAGE:
+          this.handleAgentNewMessage(message.payload)
           break
         case WS_TYPE_REACTION_UPDATE:
           this.handleReactionUpdate(store, message.payload)
@@ -347,6 +353,26 @@ class WebSocketService {
         }
       })
     }
+
+    // Bell notification: every org user gets pinged for a NEW unassigned
+    // transfer sitting in the queue (use case A — AI requests a transfer).
+    // Assigned transfers don't go to the bell; the toast above is enough.
+    if (!payload.agent_id) {
+      const contactName = payload.contact_name || payload.phone_number
+      const notif = useNotificationsStore()
+      const title = 'New transfer in queue'
+      const body = `${contactName} is waiting for a human agent.`
+      const queueLink = '/chatbot/transfers?tab=queue'
+      notif.add({
+        kind: 'transfer_pending',
+        title,
+        body,
+        link: queueLink,
+        refId: payload.id,
+      })
+      playNotificationSound()
+      browserNotifications.show({ title, body, tag: `transfer:${payload.id}`, link: queueLink })
+    }
   }
 
   private handleAgentTransferResume(payload: any) {
@@ -377,6 +403,11 @@ class WebSocketService {
     // Always refresh to ensure UI is in sync (queue counts, etc.)
     transfersStore.fetchTransfers()
 
+    // Someone (this user or another) picked up the transfer — silently
+    // dismiss the "new transfer in queue" bell for everyone in the org
+    // so the queue doesn't pile up stale items.
+    useNotificationsStore().dismissByRef('transfer_pending', payload.id)
+
     // Notify if assigned to current user
     const currentUserId = authStore.user?.id
     if (payload.agent_id === currentUserId) {
@@ -389,6 +420,25 @@ class WebSocketService {
         }
       })
     }
+  }
+
+  // Use case B — backend has determined this user owns an active transfer
+  // for the contact who just replied. Add a bell + browser notification.
+  private handleAgentNewMessage(payload: any) {
+    const contactName = payload.contact_name || payload.phone_number || 'Customer'
+    const title = `${contactName} replied`
+    const body = payload.preview || 'New message in your chat.'
+    const link = `/chat/${payload.contact_id}`
+
+    useNotificationsStore().add({
+      kind: 'agent_new_message',
+      title,
+      body,
+      link,
+      refId: payload.contact_id,
+    })
+    playNotificationSound()
+    browserNotifications.show({ title, body, tag: `contact:${payload.contact_id}`, link })
   }
 
   private handleTransferEscalation(payload: any) {
