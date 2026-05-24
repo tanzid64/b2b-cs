@@ -735,3 +735,8 @@
 .avatar-status-pulse::after {
   animation: badge-pulse 2s ease-in-out infinite;
 }
+
+/* Hide Chatbot Flows nav entry — feature deferred for now. */
+a[href="/chatbot/flows"] {
+  display: none !important;
+}

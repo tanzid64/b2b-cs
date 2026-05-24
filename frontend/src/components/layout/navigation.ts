@@ -73,7 +73,7 @@ export const navigationSections: NavSection[] = [
         children: [
           { name: 'nav.overview', path: '/chatbot', icon: Bot, permission: 'settings.chatbot' },
           { name: 'nav.keywords', path: '/chatbot/keywords', icon: Key, permission: 'chatbot.keywords' },
-          { name: 'nav.flows', path: '/chatbot/flows', icon: Workflow, permission: 'flows.chatbot' },
+          // { name: 'nav.flows', path: '/chatbot/flows', icon: Workflow, permission: 'flows.chatbot' },
           { name: 'nav.aiContexts', path: '/chatbot/ai', icon: Sparkles, permission: 'chatbot.ai' },
           { name: 'nav.transfers', path: '/chatbot/transfers', icon: UserX, permission: 'transfers' }
         ]
@@ -90,12 +90,12 @@ export const navigationSections: NavSection[] = [
         icon: FileText,
         permission: 'templates'
       },
-      {
-        name: 'nav.flows',
-        path: '/flows',
-        icon: Workflow,
-        permission: 'flows.whatsapp'
-      },
+      // {
+      //   name: 'nav.flows',
+      //   path: '/flows',
+      //   icon: Workflow,
+      //   permission: 'flows.whatsapp'
+      // },
     ]
   },
   {
