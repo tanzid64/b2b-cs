@@ -9,8 +9,9 @@ export interface AgentTransfer {
   phone_number: string
   whatsapp_account: string
   status: 'active' | 'resumed' | 'expired'
-  source: 'manual' | 'flow' | 'keyword'
+  source: 'manual' | 'flow' | 'keyword' | 'chatbot_disabled' | 'ai_escalated'
   agent_id?: string
+  ai_escalated?: boolean
   agent_name?: string
   team_id?: string
   team_name?: string

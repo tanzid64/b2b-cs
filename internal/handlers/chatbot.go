@@ -1520,7 +1520,7 @@ func (a *App) TestAI(r *fastglue.Request) error {
 	testMessage := "Hello! Please respond with a short greeting to confirm you are working."
 
 	start := time.Now()
-	response, err := a.generateAIResponse(testSettings, nil, testMessage)
+	response, _, err := a.generateAIResponse(testSettings, nil, testMessage)
 	elapsed := time.Since(start)
 
 	if err != nil {

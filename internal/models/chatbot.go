@@ -306,6 +306,7 @@ type AgentTransfer struct {
 	TransferredAt       time.Time      `gorm:"autoCreateTime" json:"transferred_at"`
 	ResumedAt           *time.Time     `json:"resumed_at,omitempty"`
 	ResumedBy           *uuid.UUID     `gorm:"type:uuid" json:"resumed_by,omitempty"`
+	AIEscalated         bool           `gorm:"column:ai_escalated;default:false;index" json:"ai_escalated"` // AI has handed this transfer off — chatbot stops responding
 
 	// SLA Tracking (embedded - all fields stored in same table)
 	SLA SLATracking `gorm:"embedded"`

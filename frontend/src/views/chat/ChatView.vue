@@ -274,6 +274,16 @@ const activeTransfer = computed(() => {
 
 const activeTransferId = computed(() => activeTransfer.value?.id || null)
 
+// True only when the chatbot is genuinely silent for this contact — either a
+// human agent has claimed the transfer or AI has handed off. A bare queued
+// transfer (no agent, not escalated) doesn't pause the bot anymore because
+// the AI keeps replying until pickup.
+const isChatbotPaused = computed(() => {
+  const t = activeTransfer.value
+  if (!t) return false
+  return !!t.agent_id || t.ai_escalated === true
+})
+
 // Check if current user can assign contacts (admin or manager only)
 const canAssignContacts = computed(() => {
   // Try store first, then fallback to localStorage
@@ -1760,7 +1770,7 @@ async function handleVoiceNote(file: File) {
                 <p class="text-sm font-medium text-white light:text-gray-900">
                   {{ contactsStore.currentContact.name || contactsStore.currentContact.phone_number }}
                 </p>
-                <Badge v-if="activeTransferId" class="text-[10px] h-5 bg-orange-500/20 text-orange-400 light:bg-orange-100 light:text-orange-700">
+                <Badge v-if="isChatbotPaused" class="text-[10px] h-5 bg-orange-500/20 text-orange-400 light:bg-orange-100 light:text-orange-700">
                   Paused
                 </Badge>
                 <Badge v-if="contactsStore.currentContact?.marketing_opt_out" class="text-[10px] h-5 bg-red-500/20 text-red-400 light:bg-red-100 light:text-red-700" :title="$t('chat.marketingOptOut')">

@@ -325,9 +325,11 @@ func (a *App) processIncomingMessageFull(phoneNumberID string, msg IncomingTextM
 	// Clear chatbot tracking since client has replied
 	a.ClearContactChatbotTracking(contact.ID)
 
-	// Check for active agent transfer - skip chatbot processing if transferred
-	if a.hasActiveAgentTransfer(account.OrganizationID, contact.ID) {
-		a.Log.Info("Contact has active agent transfer, skipping chatbot processing",
+	// Skip chatbot only when a human has already claimed this conversation
+	// or the AI has previously handed it off. Unassigned queued transfers
+	// fall through so the AI keeps replying until an agent picks up.
+	if a.hasAssignedOrEscalatedTransfer(account.OrganizationID, contact.ID) {
+		a.Log.Info("Contact transfer is assigned or AI-escalated, skipping chatbot processing",
 			"contact_id", contact.ID,
 			"phone_number", contact.PhoneNumber)
 		return
@@ -495,19 +497,27 @@ func (a *App) processIncomingMessageFull(phoneNumberID string, msg IncomingTextM
 	// If no keyword matched, try AI response if enabled
 	if settings.AI.Enabled && settings.AI.Provider != "" && settings.AI.APIKey != "" {
 		a.Log.Info("Attempting AI response", "provider", settings.AI.Provider, "model", settings.AI.Model)
-		aiResponse, err := a.generateAIResponse(settings, session, messageText)
+		aiResponse, escalate, err := a.generateAIResponse(settings, session, messageText)
 		if err != nil {
 			a.Log.Error("AI response failed", "error", err, "provider", settings.AI.Provider, "model", settings.AI.Model)
 			// Fall through to default response
 		} else if aiResponse != "" {
-			a.Log.Info("AI response generated successfully", "response_length", len(aiResponse))
+			a.Log.Info("AI response generated successfully", "response_length", len(aiResponse), "escalate", escalate)
 			if err := a.sendAndSaveTextMessage(account, contact, aiResponse); err != nil {
 				a.Log.Error("Failed to send AI response", "error", err, "contact", contact.PhoneNumber)
 			}
 			a.logSessionMessage(session.ID, models.DirectionOutgoing, aiResponse, "ai_response")
+			if escalate {
+				a.Log.Info("AI requested escalation, handing off to human agent", "contact_id", contact.ID)
+				a.escalateContactToHuman(account, contact)
+			}
 			return
 		} else {
-			a.Log.Warn("AI returned empty response")
+			a.Log.Warn("AI returned empty response", "escalate", escalate)
+			if escalate {
+				a.escalateContactToHuman(account, contact)
+				return
+			}
 		}
 	} else {
 		a.Log.Info("AI not configured", "ai_enabled", settings.AI.Enabled, "has_provider", settings.AI.Provider != "", "has_api_key", settings.AI.APIKey != "")
@@ -953,22 +963,52 @@ type ApiResponse struct {
 //
 // Mirrors fetchAPIContext in seeding implicit variables (phone_number) so flow-step
 // API templates can interpolate {{phone_number}} just like AI-context API templates.
-func (a *App) generateAIResponse(settings *models.ChatbotSettings, session *models.ChatbotSession, userMessage string) (string, error) {
-	// Build context from AIContext entries
-	contextData := a.buildAIContext(settings.OrganizationID, session, userMessage)
+// aiEscalateToken is the sentinel the AI emits in its reply when it can no
+// longer help and the conversation must be handed off to a human. The token
+// is stripped from the customer-facing reply before it is sent.
+const aiEscalateToken = "[ESCALATE]"
 
+// aiEscalationRule is appended to every AI system prompt so the model knows
+// how to signal a handoff. Kept short to minimise token cost.
+const aiEscalationRule = "## Handoff Rule\n" +
+	"If the user explicitly asks for a human agent, expresses strong dissatisfaction, " +
+	"or asks something you cannot reliably answer from the context above, reply with a " +
+	"brief acknowledgement (e.g. \"Let me connect you with an agent who can help.\") and " +
+	"then append the token " + aiEscalateToken + " on its own line at the very end. " +
+	"The token will be stripped before the user sees the message and a human agent will take over."
+
+// generateAIResponse dispatches to the configured AI provider, appends the
+// escalation rule to the context, and post-processes the reply to detect and
+// strip the [ESCALATE] handoff token. Returns (cleanedReply, escalate, err).
+func (a *App) generateAIResponse(settings *models.ChatbotSettings, session *models.ChatbotSession, userMessage string) (string, bool, error) {
+	contextData := a.buildAIContext(settings.OrganizationID, session, userMessage)
+	if contextData != "" {
+		contextData = contextData + "\n\n" + aiEscalationRule
+	} else {
+		contextData = aiEscalationRule
+	}
+
+	var raw string
+	var err error
 	switch settings.AI.Provider {
 	case models.AIProviderOpenAI:
-		return a.generateOpenAIResponse(settings, session, userMessage, contextData)
+		raw, err = a.generateOpenAIResponse(settings, session, userMessage, contextData)
 	case models.AIProviderAnthropic:
-		return a.generateAnthropicResponse(settings, session, userMessage, contextData)
+		raw, err = a.generateAnthropicResponse(settings, session, userMessage, contextData)
 	case models.AIProviderGoogle:
-		return a.generateGoogleResponse(settings, session, userMessage, contextData)
+		raw, err = a.generateGoogleResponse(settings, session, userMessage, contextData)
 	case models.AIProviderDeepSeek:
-		return a.generateDeepSeekResponse(settings, session, userMessage, contextData)
+		raw, err = a.generateDeepSeekResponse(settings, session, userMessage, contextData)
 	default:
-		return "", fmt.Errorf("unsupported AI provider: %s", settings.AI.Provider)
+		return "", false, fmt.Errorf("unsupported AI provider: %s", settings.AI.Provider)
 	}
+	if err != nil {
+		return "", false, err
+	}
+
+	escalate := strings.Contains(raw, aiEscalateToken)
+	clean := strings.TrimSpace(strings.ReplaceAll(raw, aiEscalateToken, ""))
+	return clean, escalate, nil
 }
 
 // buildAIContext fetches and combines all AI context data

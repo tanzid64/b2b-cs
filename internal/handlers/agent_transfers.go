@@ -1072,13 +1072,68 @@ func (a *App) hasActiveAgentTransfer(orgID, contactID uuid.UUID) bool {
 	return count > 0
 }
 
+// hasAssignedOrEscalatedTransfer reports whether the contact has an active
+// transfer that the chatbot/AI should NOT auto-respond to: either a human
+// agent has claimed it (AgentID set) or the AI has already escalated it.
+// Unassigned, non-escalated transfers (i.e. waiting in queue) return false so
+// the AI keeps the customer engaged until an agent picks up.
+func (a *App) hasAssignedOrEscalatedTransfer(orgID, contactID uuid.UUID) bool {
+	var count int64
+	a.DB.Model(&models.AgentTransfer{}).
+		Where("organization_id = ? AND contact_id = ? AND status = ? AND (agent_id IS NOT NULL OR ai_escalated = ?)",
+			orgID, contactID, models.TransferStatusActive, true).
+		Count(&count)
+	return count > 0
+}
+
+// escalateContactToHuman marks the AI as having handed off this conversation.
+// If an active transfer exists it flips ai_escalated to true; otherwise it
+// creates a new queue transfer with source ai_escalated. Subsequent inbound
+// messages will skip the chatbot (see hasAssignedOrEscalatedTransfer) until
+// an agent picks up.
+func (a *App) escalateContactToHuman(account *models.WhatsAppAccount, contact *models.Contact) {
+	var existing models.AgentTransfer
+	err := a.DB.Where("organization_id = ? AND contact_id = ? AND status = ?",
+		account.OrganizationID, contact.ID, models.TransferStatusActive).
+		First(&existing).Error
+	if err == nil {
+		if existing.AIEscalated {
+			return
+		}
+		if uerr := a.DB.Model(&existing).Update("ai_escalated", true).Error; uerr != nil {
+			a.Log.Error("Failed to mark transfer as AI-escalated", "error", uerr, "transfer_id", existing.ID)
+			return
+		}
+		a.Log.Info("Marked existing transfer as AI-escalated", "transfer_id", existing.ID, "contact_id", contact.ID)
+		return
+	}
+
+	settings, _ := a.getChatbotSettingsCached(account.OrganizationID, account.Name)
+	transfer := models.AgentTransfer{
+		BaseModel:       models.BaseModel{ID: uuid.New()},
+		OrganizationID:  account.OrganizationID,
+		ContactID:       contact.ID,
+		WhatsAppAccount: account.Name,
+		PhoneNumber:     contact.PhoneNumber,
+		Status:          models.TransferStatusActive,
+		Source:          models.TransferSourceAIEscalated,
+		AIEscalated:     true,
+		TransferredAt:   time.Now(),
+	}
+	if err := a.saveAndFinalizeTransfer(&transfer, account, contact, settings, false); err != nil {
+		a.Log.Error("Failed to create AI-escalated transfer", "error", err, "contact_id", contact.ID)
+		return
+	}
+	a.Log.Info("AI-escalated transfer created", "transfer_id", transfer.ID, "contact_id", contact.ID)
+}
+
 // willChatbotHandle returns true when an incoming message is expected to be
 // handled by the chatbot — i.e. chatbot is enabled for the account and the
 // contact has no active agent transfer. Used to pre-mark messages as read
 // so the agent's contact-list unread count doesn't flash for bot-handled
 // conversations.
 func (a *App) willChatbotHandle(account *models.WhatsAppAccount, contact *models.Contact) bool {
-	if a.hasActiveAgentTransfer(account.OrganizationID, contact.ID) {
+	if a.hasAssignedOrEscalatedTransfer(account.OrganizationID, contact.ID) {
 		return false
 	}
 	settings, err := a.getChatbotSettingsCached(account.OrganizationID, account.Name)

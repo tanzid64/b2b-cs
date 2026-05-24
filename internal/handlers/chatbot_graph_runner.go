@@ -655,7 +655,7 @@ func (a *App) execChatAIResponse(node *ChatNode, ctx *chatNodeCtx) (nodeOutcome,
 		userMessage = processTemplate(tmpl, ctx.session.SessionData)
 	}
 
-	answer, err := a.generateAIResponse(settings, ctx.session, userMessage)
+	answer, escalate, err := a.generateAIResponse(settings, ctx.session, userMessage)
 	if err != nil {
 		a.Log.Error("ai_response node generateAIResponse failed",
 			"node", node.ID, "session", ctx.session.ID, "error", err)
@@ -663,7 +663,10 @@ func (a *App) execChatAIResponse(node *ChatNode, ctx *chatNodeCtx) (nodeOutcome,
 	}
 	if answer == "" {
 		a.Log.Warn("ai_response node got empty answer from provider",
-			"node", node.ID, "session", ctx.session.ID)
+			"node", node.ID, "session", ctx.session.ID, "escalate", escalate)
+		if escalate {
+			a.escalateContactToHuman(ctx.account, ctx.contact)
+		}
 		return nodeOutcome{outcome: "default"}, nil
 	}
 
@@ -671,6 +674,10 @@ func (a *App) execChatAIResponse(node *ChatNode, ctx *chatNodeCtx) (nodeOutcome,
 		return nodeOutcome{}, fmt.Errorf("send ai response: %w", err)
 	}
 	a.logSessionMessage(ctx.session.ID, models.DirectionOutgoing, answer, node.ID)
+	if escalate {
+		a.Log.Info("AI requested escalation from flow node", "node", node.ID, "contact_id", ctx.contact.ID)
+		a.escalateContactToHuman(ctx.account, ctx.contact)
+	}
 	return nodeOutcome{outcome: "default"}, nil
 }
 
