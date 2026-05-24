@@ -18,13 +18,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useUsersStore } from '@/stores/users'
 import { useTeamsStore } from '@/stores/teams'
 import { toast } from 'vue-sonner'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { UserX, Play, MessageSquare, User, Clock, Loader2, Users, UserPlus, AlertTriangle, CheckCircle2, XCircle } from 'lucide-vue-next'
 import { getErrorMessage } from '@/lib/api-utils'
 
 const { t } = useI18n()
 
 const router = useRouter()
+const route = useRoute()
 const transfersStore = useTransfersStore()
 const authStore = useAuthStore()
 const usersStore = useUsersStore()
@@ -40,7 +41,28 @@ const isPicking = ref(false)
 const allowQueuePickup = ref(true)
 const isAssigning = ref(false)
 const isResuming = ref(false)
-const activeTab = ref('my-transfers')
+// Tab state is mirrored to the URL (?tab=...) so deep links from
+// notifications / bookmarks land on the right view. Falls back to
+// "my-transfers" when the query param is missing or unknown.
+const VALID_TABS = ['my-transfers', 'queue', 'all', 'history'] as const
+type TabValue = typeof VALID_TABS[number]
+function parseTabFromRoute(): TabValue {
+  const t = String(route.query.tab || '')
+  return (VALID_TABS as readonly string[]).includes(t) ? (t as TabValue) : 'my-transfers'
+}
+const activeTab = ref<TabValue>(parseTabFromRoute())
+
+// activeTab → URL
+watch(activeTab, (v) => {
+  if (route.query.tab === v) return
+  router.replace({ query: { ...route.query, tab: v } })
+})
+
+// URL → activeTab (handles back/forward + notification clicks while already on this page)
+watch(() => route.query.tab, () => {
+  const next = parseTabFromRoute()
+  if (next !== activeTab.value) activeTab.value = next
+})
 const assignDialogOpen = ref(false)
 const resumeDialogOpen = ref(false)
 const transferToResume = ref<AgentTransfer | null>(null)
